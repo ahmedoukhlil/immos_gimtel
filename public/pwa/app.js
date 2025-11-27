@@ -496,7 +496,9 @@ class API {
      * @returns {Promise<Object>} Données de la localisation
      */
     static async getLocalisationByCode(code) {
-        return this.request(`/localisations/by-code/${encodeURIComponent(code)}`);
+        const response = await this.request(`/localisations/by-code/${encodeURIComponent(code)}`);
+        // Le contrôleur retourne { localisation: {...} }, extraire l'objet localisation
+        return response?.localisation || response;
     }
 
     /**
@@ -514,7 +516,26 @@ class API {
      * @returns {Promise<Object>} Données du bien
      */
     static async getBien(bienId) {
-        return this.request(`/biens/${bienId}`);
+        console.log('[API] getBien appelée avec ID:', bienId);
+        const response = await this.request(`/biens/${bienId}`);
+        // Le contrôleur retourne { bien: {...} }, extraire l'objet bien
+        const bien = response?.bien || response;
+        console.log('[API] Bien extrait:', bien);
+        return bien;
+    }
+
+    /**
+     * Récupère un bien par son code inventaire
+     * @param {string} code - Code inventaire du bien
+     * @returns {Promise<Object>} Données du bien
+     */
+    static async getBienByCode(code) {
+        console.log('[API] getBienByCode appelée avec code:', code);
+        const response = await this.request(`/biens/by-code/${encodeURIComponent(code)}`);
+        // Le contrôleur retourne { bien: {...} }, extraire l'objet bien
+        const bien = response?.bien || response;
+        console.log('[API] Bien extrait par code:', bien);
+        return bien;
     }
 
     /**
@@ -1067,37 +1088,72 @@ class ScannerManager {
      * @param {Object} decodedResult - Résultat complet du décodage
      */
     async onScanSuccess(decodedText, decodedResult) {
-        console.log('[Scanner] QR code scanné:', decodedText);
+        console.log('[Scanner] ========== QR CODE SCANNÉ ==========');
+        console.log('[Scanner] Texte brut décodé:', decodedText);
+        console.log('[Scanner] Résultat complet:', decodedResult);
 
-            // Vibration si disponible
+        // Vibration si disponible
         if (navigator.vibrate) {
             navigator.vibrate(200);
         }
 
-        // Son de feedback (optionnel)
+        // Son de feedback
         playSound('success');
-
-        // Parser le QR code (format JSON attendu)
-        let qrData;
-        try {
-            qrData = JSON.parse(decodedText);
-        } catch (error) {
-            // Si pas JSON, considérer comme code simple
-            qrData = { type: 'unknown', code: decodedText };
-        }
 
         // Arrêter temporairement le scanner
         await this.stop();
 
-        // Traiter selon le type
+        // Parser le QR code
+        let qrData;
+        try {
+            console.log('[Scanner] Tentative de parsing JSON...');
+            qrData = JSON.parse(decodedText);
+            console.log('[Scanner] ✓ JSON parsé avec succès:', qrData);
+        } catch (error) {
+            console.error('[Scanner] ✗ Erreur parsing JSON:', error);
+            console.log('[Scanner] Tentative avec le texte brut comme code...');
+            
+            // Si le parsing échoue, essayer de deviner le type par le préfixe
+            if (decodedText.startsWith('BUR-') || decodedText.startsWith('ATELIER-') || decodedText.startsWith('DEPOT-') || decodedText.startsWith('LOC-')) {
+                qrData = { 
+                    type: 'localisation', 
+                    code: decodedText 
+                };
+                console.log('[Scanner] → Détecté comme localisation (par préfixe)');
+            } else if (decodedText.startsWith('INV-')) {
+                qrData = { 
+                    type: 'bien', 
+                    code: decodedText 
+                };
+                console.log('[Scanner] → Détecté comme bien (par préfixe)');
+            } else {
+                // Dernière tentative : considérer comme code brut
+                qrData = { 
+                    type: 'unknown', 
+                    code: decodedText 
+                };
+                console.log('[Scanner] → Type inconnu, code brut:', decodedText);
+            }
+        }
+
+        console.log('[Scanner] Mode actuel du scanner:', this.currentMode);
+        console.log('[Scanner] Type de QR détecté:', qrData.type);
+        console.log('[Scanner] Données QR:', qrData);
+
+        // Router selon le type et le mode
         if (qrData.type === 'localisation' || this.currentMode === 'localisation') {
+            console.log('[Scanner] → Traitement en tant que LOCALISATION');
             await this.handleLocalisationScan(qrData);
         } else if (qrData.type === 'bien' || this.currentMode === 'bien') {
+            console.log('[Scanner] → Traitement en tant que BIEN');
             await this.handleBienScan(qrData);
         } else {
-            showToast('QR code non reconnu', 'error');
+            console.error('[Scanner] ✗ Type de QR non reconnu');
+            showToast('QR code non reconnu. Format invalide.', 'error');
             setTimeout(() => this.start(), 2000);
         }
+
+        console.log('[Scanner] ========== FIN TRAITEMENT QR ==========');
     }
 
     /**
@@ -1115,12 +1171,13 @@ class ScannerManager {
      * @param {Object} qrData - Données du QR code
      */
     async handleLocalisationScan(qrData) {
+        console.log('[Scanner] ========== SCAN LOCALISATION ==========');
+        console.log('[Scanner] Données QR:', qrData);
+
         try {
-            console.log('[Scanner] Scan localisation détecté:', qrData);
-            
             // Validation des données d'entrée
             if (!qrData || !qrData.code) {
-                console.error('[Scanner] Données QR code invalides:', qrData);
+                console.error('[Scanner] ✗ Données QR code invalides:', qrData);
                 showToast('QR code invalide', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
@@ -1128,7 +1185,7 @@ class ScannerManager {
 
             // Validation de l'inventaire
             if (!AppState.inventaire || !AppState.inventaire.id) {
-                console.error('[Scanner] Aucun inventaire chargé');
+                console.error('[Scanner] ✗ Aucun inventaire chargé');
                 showToast('Aucun inventaire en cours', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
@@ -1136,55 +1193,62 @@ class ScannerManager {
 
             showToast('Localisation détectée, vérification...', 'info');
 
-            // Récupérer les infos de la localisation
+            // Récupérer la localisation par code
+            console.log('[Scanner] Appel API getLocalisationByCode avec:', qrData.code);
             let localisation;
             try {
                 localisation = await API.getLocalisationByCode(qrData.code);
-                console.log('[Scanner] Localisation récupérée:', localisation);
+                console.log('[Scanner] Localisation reçue:', localisation);
             } catch (error) {
-                console.error('[Scanner] Erreur récupération localisation:', error);
+                console.error('[Scanner] ✗ Erreur récupération localisation:', error);
+                console.error('[Scanner] Message:', error.message);
+                console.error('[Scanner] Stack:', error.stack);
                 showToast('Erreur lors de la récupération de la localisation', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
 
             if (!localisation || !localisation.id) {
-                console.warn('[Scanner] Localisation non trouvée pour le code:', qrData.code);
+                console.error('[Scanner] ✗ Localisation non trouvée pour le code:', qrData.code);
                 showToast('Localisation non trouvée', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
 
             // Vérifier que cette localisation est assignée à l'agent
+            console.log('[Scanner] Vérification assignation...');
+            console.log('[Scanner] Inventaire ID:', AppState.inventaire.id);
+            
             let mesLocalisations;
             try {
                 mesLocalisations = await API.getMesLocalisations(AppState.inventaire.id);
-                console.log('[Scanner] Localisations assignées:', mesLocalisations);
+                console.log('[Scanner] Mes localisations:', mesLocalisations);
             } catch (error) {
-                console.error('[Scanner] Erreur récupération localisations assignées:', error);
+                console.error('[Scanner] ✗ Erreur récupération localisations assignées:', error);
                 showToast('Erreur lors de la vérification des assignations', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
 
             if (!Array.isArray(mesLocalisations)) {
-                console.error('[Scanner] Format de réponse invalide pour mesLocalisations:', mesLocalisations);
+                console.error('[Scanner] ✗ Format de réponse invalide pour mesLocalisations:', mesLocalisations);
                 showToast('Erreur de format de données', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
 
             const isAssigned = mesLocalisations.some(loc => loc.localisation_id === localisation.id);
-            console.log('[Scanner] Localisation assignée?', isAssigned);
+            console.log('[Scanner] Est assigné:', isAssigned);
 
             if (!isAssigned) {
-                console.warn('[Scanner] Localisation non assignée à l\'agent:', localisation.code);
+                console.error('[Scanner] ✗ Localisation non assignée à cet agent');
                 showToast('Cette localisation ne vous est pas assignée', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
 
             // Démarrer le scan de cette localisation
+            console.log('[Scanner] Démarrage scan localisation...');
             let inventaireLocalisation;
             try {
                 inventaireLocalisation = await API.demarrerLocalisation(
@@ -1193,30 +1257,25 @@ class ScannerManager {
                 );
                 console.log('[Scanner] Inventaire localisation créé:', inventaireLocalisation);
             } catch (error) {
-                console.error('[Scanner] Erreur démarrage localisation:', error);
+                console.error('[Scanner] ✗ Erreur démarrage localisation:', error);
                 showToast('Erreur lors du démarrage du scan', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
 
             if (!inventaireLocalisation || !inventaireLocalisation.id) {
-                console.error('[Scanner] Inventaire localisation invalide:', inventaireLocalisation);
+                console.error('[Scanner] ✗ Inventaire localisation invalide:', inventaireLocalisation);
                 showToast('Erreur lors de la création du scan', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
 
-            // Mettre à jour le state
-            AppState.activeLocation = inventaireLocalisation;
-            AppState.localisation = localisation;
-            AppState.scansSession = []; // Réinitialiser les scans de la session
-            console.log('[Scanner] State mis à jour');
-
             // Charger les biens attendus
+            console.log('[Scanner] Chargement biens attendus...');
             let biens;
             try {
                 biens = await API.getBiensLocalisation(localisation.id);
-                console.log('[Scanner] Biens récupérés:', biens?.length || 0);
+                console.log('[Scanner] Biens chargés:', biens?.length || 0, 'biens');
             } catch (error) {
                 console.error('[Scanner] Erreur récupération biens:', error);
                 // Continuer même si les biens ne peuvent pas être chargés
@@ -1224,7 +1283,12 @@ class ScannerManager {
                 showToast('Attention: impossible de charger les biens', 'warning');
             }
 
+            // Mettre à jour le state
+            AppState.activeLocation = inventaireLocalisation;
+            AppState.localisation = localisation;
             AppState.biensAttendus = Array.isArray(biens) ? biens : [];
+            AppState.scansSession = [];
+            console.log('[Scanner] State mis à jour');
 
             // Mettre en cache
             try {
@@ -1250,32 +1314,25 @@ class ScannerManager {
 
             // Changer le mode en 'bien'
             this.currentMode = 'bien';
-            console.log('[Scanner] Mode changé en "bien"');
+            console.log('[Scanner] Mode changé en: bien');
 
             // Mettre à jour l'UI
             updateActiveLocationUI();
-            showToast(`Bureau activé : ${localisation.code}`, 'success');
+            showToast(`✓ Bureau activé : ${localisation.code}`, 'success');
+            playSound('success');
 
             // Redémarrer le scanner pour les biens
-            setTimeout(() => {
-                try {
-                    this.start();
-                } catch (error) {
-                    console.error('[Scanner] Erreur redémarrage scanner:', error);
-                }
-            }, 1500);
+            setTimeout(() => this.start(), 1500);
+
+            console.log('[Scanner] ========== LOCALISATION ACTIVÉE ==========');
 
         } catch (error) {
-            console.error('[Scanner] Erreur critique scan localisation:', error);
-            console.error('[Scanner] Stack trace:', error.stack);
-            showToast(error.message || 'Erreur lors du scan de la localisation', 'error');
-            setTimeout(() => {
-                try {
-                    this.start();
-                } catch (restartError) {
-                    console.error('[Scanner] Erreur redémarrage après erreur:', restartError);
-                }
-            }, 2000);
+            console.error('[Scanner] ========== ERREUR SCAN LOCALISATION ==========');
+            console.error('[Scanner] Erreur:', error);
+            console.error('[Scanner] Message:', error.message);
+            console.error('[Scanner] Stack:', error.stack);
+            showToast(error.message || 'Erreur lors du scan', 'error');
+            setTimeout(() => this.start(), 2000);
         }
     }
 
@@ -1284,68 +1341,54 @@ class ScannerManager {
      * @param {Object} qrData - Données du QR code
      */
     async handleBienScan(qrData) {
-        try {
-            console.log('[Scanner] Scan bien détecté:', qrData);
-            
-            // Validation des données d'entrée
-            if (!qrData || !qrData.id) {
-                console.error('[Scanner] Données QR code invalides:', qrData);
-                showToast('QR code invalide', 'error');
-                setTimeout(() => this.start(), 2000);
-                return;
-            }
+        console.log('[Scanner] ========== SCAN BIEN ==========');
+        console.log('[Scanner] Données QR:', qrData);
 
+        try {
             // Vérifier qu'un bureau est actif
-            if (!AppState.activeLocation || !AppState.activeLocation.id) {
-                console.warn('[Scanner] Aucun bureau actif');
+            if (!AppState.activeLocation) {
+                console.error('[Scanner] ✗ Aucun bureau actif');
                 showToast('Scannez d\'abord un bureau', 'warning');
                 this.currentMode = 'localisation';
-                setTimeout(() => {
-                    try {
-                        this.start();
-                    } catch (error) {
-                        console.error('[Scanner] Erreur redémarrage:', error);
-                    }
-                }, 2000);
-                return;
-            }
-
-            // Vérifier que l'inventaire est chargé
-            if (!AppState.inventaire || !AppState.inventaire.id) {
-                console.error('[Scanner] Aucun inventaire chargé');
-                showToast('Aucun inventaire en cours', 'error');
-                setTimeout(() => {
-                    try {
-                        this.start();
-                    } catch (error) {
-                        console.error('[Scanner] Erreur redémarrage:', error);
-                    }
-                }, 2000);
+                setTimeout(() => this.start(), 2000);
                 return;
             }
 
             showToast('Bien détecté, chargement...', 'info');
 
-            // Récupérer les infos du bien
-            let bien = null;
-            try {
-                bien = await API.getBien(qrData.id);
-                console.log('[Scanner] Bien récupéré depuis API:', bien?.id);
-            } catch (error) {
-                console.warn('[Scanner] Erreur récupération bien depuis API:', error);
-                // Si offline, essayer depuis le cache
-                if (!navigator.onLine) {
-                    try {
-                        bien = await dbManager.getCachedBien(qrData.id);
-                        console.log('[Scanner] Bien récupéré depuis cache:', bien?.id);
-                    } catch (cacheError) {
-                        console.error('[Scanner] Erreur récupération depuis cache:', cacheError);
+            // Récupérer le bien
+            console.log('[Scanner] Récupération bien...');
+            let bien;
+            
+            if (qrData.id) {
+                console.log('[Scanner] Appel API getBien avec ID:', qrData.id);
+                try {
+                    bien = await API.getBien(qrData.id);
+                    console.log('[Scanner] Bien reçu:', bien);
+                } catch (error) {
+                    console.warn('[Scanner] Erreur récupération bien depuis API:', error);
+                    // Si offline, essayer depuis le cache
+                    if (!navigator.onLine) {
+                        try {
+                            bien = await dbManager.getCachedBien(qrData.id);
+                            console.log('[Scanner] Bien récupéré depuis cache:', bien?.id);
+                        } catch (cacheError) {
+                            console.error('[Scanner] Erreur récupération depuis cache:', cacheError);
+                        }
                     }
+                }
+            } else if (qrData.code) {
+                console.log('[Scanner] Appel API getBienByCode avec code:', qrData.code);
+                try {
+                    bien = await API.getBienByCode(qrData.code);
+                    console.log('[Scanner] Bien reçu par code:', bien);
+                } catch (error) {
+                    console.warn('[Scanner] Erreur récupération bien par code:', error);
                 }
             }
 
             // Si toujours pas de bien, essayer le cache même en ligne (fallback)
-            if (!bien) {
+            if (!bien && qrData.id) {
                 try {
                     bien = await dbManager.getCachedBien(qrData.id);
                     console.log('[Scanner] Bien récupéré depuis cache (fallback):', bien?.id);
@@ -1355,66 +1398,40 @@ class ScannerManager {
             }
 
             if (!bien || !bien.id) {
-                console.error('[Scanner] Bien non trouvé pour ID:', qrData.id);
+                console.error('[Scanner] ✗ Bien non trouvé');
                 showToast('Bien non trouvé', 'error');
-                setTimeout(() => {
-                    try {
-                        this.start();
-                    } catch (error) {
-                        console.error('[Scanner] Erreur redémarrage:', error);
-                    }
-                }, 2000);
+                setTimeout(() => this.start(), 2000);
                 return;
             }
 
-            console.log('[Scanner] Bien trouvé:', bien.code_inventaire || bien.id);
-
-            // Vérifier si déjà scanné dans cette session
+            // Vérifier si déjà scanné dans cet inventaire
             const dejaScan = AppState.scansSession.some(s => s.bien_id === bien.id);
+            console.log('[Scanner] Déjà scanné:', dejaScan);
+            
             if (dejaScan) {
-                console.warn('[Scanner] Bien déjà scanné dans cette session:', bien.id);
-                showToast('Ce bien a déjà été scanné dans ce bureau', 'warning');
+                console.warn('[Scanner] ⚠ Bien déjà scanné');
+                showToast('Ce bien a déjà été scanné', 'warning');
                 playSound('warning');
                 if (navigator.vibrate) {
                     navigator.vibrate([100, 50, 100, 50, 100]);
                 }
-                setTimeout(() => {
-                    try {
-                        this.start();
-                    } catch (error) {
-                        console.error('[Scanner] Erreur redémarrage:', error);
-                    }
-                }, 2000);
+                setTimeout(() => this.start(), 2000);
                 return;
             }
 
             // Afficher la fiche du bien et les boutons d'action
-            try {
-                displayBienResult(bien);
-                console.log('[Scanner] Fiche bien affichée');
-            } catch (error) {
-                console.error('[Scanner] Erreur affichage fiche bien:', error);
-                showToast('Erreur lors de l\'affichage du bien', 'error');
-                setTimeout(() => {
-                    try {
-                        this.start();
-                    } catch (restartError) {
-                        console.error('[Scanner] Erreur redémarrage:', restartError);
-                    }
-                }, 2000);
-            }
+            console.log('[Scanner] Affichage fiche bien...');
+            displayBienResult(bien);
+
+            console.log('[Scanner] ========== BIEN DÉTECTÉ ==========');
 
         } catch (error) {
-            console.error('[Scanner] Erreur critique scan bien:', error);
-            console.error('[Scanner] Stack trace:', error.stack);
-            showToast(error.message || 'Erreur lors du scan du bien', 'error');
-            setTimeout(() => {
-                try {
-                    this.start();
-                } catch (restartError) {
-                    console.error('[Scanner] Erreur redémarrage après erreur:', restartError);
-                }
-            }, 2000);
+            console.error('[Scanner] ========== ERREUR SCAN BIEN ==========');
+            console.error('[Scanner] Erreur:', error);
+            console.error('[Scanner] Message:', error.message);
+            console.error('[Scanner] Stack:', error.stack);
+            showToast(error.message || 'Erreur lors du scan', 'error');
+            setTimeout(() => this.start(), 2000);
         }
     }
 

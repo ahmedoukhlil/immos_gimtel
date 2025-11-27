@@ -104,6 +104,9 @@ Route::prefix('v1')->group(function () {
         |
         */
         Route::prefix('biens')->name('api.biens.')->group(function () {
+            // Récupérer un bien par son code inventaire
+            Route::get('/by-code/{code}', [BienController::class, 'byCode'])
+                ->name('by-code');
             // Détails d'un bien
             Route::get('/{bien}', [BienController::class, 'show'])
                 ->name('show');
