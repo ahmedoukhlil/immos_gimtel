@@ -1163,39 +1163,56 @@ class ScannerManager {
             }
         }
 
-        console.log('[Scanner] Mode actuel du scanner:', this.currentMode);
-        console.log('[Scanner] Type de QR détecté:', qrData.type);
-        console.log('[Scanner] Données QR:', qrData);
+        console.log('[Scanner] ========================================');
+        console.log('[Scanner] MODE ACTUEL DU SCANNER:', this.currentMode);
+        console.log('[Scanner] TYPE DU QR SCANNÉ:', qrData.type);
+        console.log('[Scanner] ========================================');
 
-        // Router selon le TYPE du QR (prioritaire) ET le mode
-        console.log('[Scanner] Vérification routage...');
-        console.log('[Scanner]   Type QR détecté:', qrData.type);
-        console.log('[Scanner]   Mode scanner actuel:', this.currentMode);
+        // ═══════════════════════════════════════════════════════
+        // LOGIQUE DE ROUTAGE STRICTE
+        // ═══════════════════════════════════════════════════════
 
-        // RÈGLE 1 : Si c'est un QR de LOCALISATION
+        // CAS 1 : QR de LOCALISATION scanné
         if (qrData.type === 'localisation') {
-            console.log('[Scanner] → Type LOCALISATION détecté');
-            console.log('[Scanner] → Traitement en tant que LOCALISATION');
-            await this.handleLocalisationScan(qrData);
-        }
-        // RÈGLE 2 : Si c'est un QR de BIEN
-        else if (qrData.type === 'bien') {
-            console.log('[Scanner] → Type BIEN détecté');
+            console.log('[Scanner] ✓ QR de LOCALISATION détecté');
             
-            // Vérifier que le mode est "bien" (bureau actif)
-            if (this.currentMode === 'bien') {
-                console.log('[Scanner] → Mode BIEN actif, traitement du bien');
-                await this.handleBienScan(qrData);
-            } else {
-                console.error('[Scanner] ✗ QR de BIEN scanné mais aucun bureau actif');
-                console.log('[Scanner] → Mode actuel:', this.currentMode);
-                showToast('⚠️ Scannez d\'abord le QR code d\'un bureau (porte)', 'warning');
+            if (this.currentMode === 'localisation') {
+                console.log('[Scanner] ✓ Mode LOCALISATION actif → OK');
+                console.log('[Scanner] → Démarrage de l\'inventaire de ce bureau');
+                await this.handleLocalisationScan(qrData);
+            } else if (this.currentMode === 'bien') {
+                console.warn('[Scanner] ⚠️ Mode BIEN actif, localisation scannée');
+                showToast('⚠️ Terminez d\'abord le bureau en cours avant de scanner un nouveau bureau', 'warning');
                 setTimeout(() => this.start(), 2000);
             }
         }
-        // RÈGLE 3 : Type inconnu
+        
+        // CAS 2 : QR de BIEN scanné
+        else if (qrData.type === 'bien') {
+            console.log('[Scanner] ✓ QR de BIEN détecté');
+            
+            if (this.currentMode === 'bien') {
+                console.log('[Scanner] ✓ Mode BIEN actif → OK');
+                console.log('[Scanner] → Enregistrement du bien dans le bureau actif');
+                await this.handleBienScan(qrData);
+            } else if (this.currentMode === 'localisation') {
+                console.error('[Scanner] ❌ Mode LOCALISATION actif, bien scanné');
+                console.log('[Scanner] → REFUS : Aucun bureau n\'est actif');
+                
+                showToast(
+                    '❌ Vous devez d\'abord scanner le QR code de la PORTE du bureau',
+                    'error',
+                    5000
+                );
+                
+                playSound('error');
+                setTimeout(() => this.start(), 3000);
+            }
+        }
+        
+        // CAS 3 : Type inconnu
         else {
-            console.error('[Scanner] ✗ Type de QR non reconnu:', qrData.type);
+            console.error('[Scanner] ❌ Type de QR non reconnu:', qrData);
             showToast('QR code non reconnu. Format invalide.', 'error');
             setTimeout(() => this.start(), 2000);
         }
@@ -1403,8 +1420,19 @@ class ScannerManager {
             this.currentMode = 'bien';
             console.log('[Scanner] Mode changé en: bien');
 
+            // ✨ NOUVEAU : Afficher l'indicateur de mode BIEN
+            showModeBien(
+                localisation,
+                biens.length,
+                0  // Aucun bien scanné pour l'instant
+            );
+
             // Mettre à jour l'UI
             updateActiveLocationUI();
+            
+            // Message de succès
+            showToast(`✓ Bureau activé : ${localisation.code}`, 'success');
+            playSound('success');
             showToast(`✓ Bureau activé : ${localisation.code}`, 'success');
             playSound('success');
 
@@ -1590,6 +1618,79 @@ const scannerManager = new ScannerManager();
 // ============================================
 // UI UPDATES
 // ============================================
+
+/**
+ * Afficher l'indicateur de mode LOCALISATION
+ */
+function showModeLocalisation() {
+    console.log('[UI] Affichage mode LOCALISATION');
+    
+    const modeLocDiv = document.getElementById('mode-localisation');
+    const modeBienDiv = document.getElementById('mode-bien');
+    
+    if (modeLocDiv) {
+        modeLocDiv.classList.remove('hidden');
+    }
+    
+    if (modeBienDiv) {
+        modeBienDiv.classList.add('hidden');
+    }
+}
+
+/**
+ * Afficher l'indicateur de mode BIEN
+ */
+function showModeBien(localisation, biensAttendus, biensScannés) {
+    console.log('[UI] Affichage mode BIEN');
+    
+    const modeLocDiv = document.getElementById('mode-localisation');
+    const modeBienDiv = document.getElementById('mode-bien');
+    
+    if (modeLocDiv) {
+        modeLocDiv.classList.add('hidden');
+    }
+    
+    if (modeBienDiv) {
+        modeBienDiv.classList.remove('hidden');
+    }
+    
+    // Mettre à jour le nom du bureau
+    const bureauName = document.getElementById('bureau-actif-name');
+    if (bureauName && localisation) {
+        bureauName.textContent = `📦 Bureau : ${localisation.code} - ${localisation.designation}`;
+    }
+    
+    // Mettre à jour la progression
+    updateProgressIndicator(biensAttendus, biensScannés);
+}
+
+/**
+ * Mettre à jour la barre de progression
+ */
+function updateProgressIndicator(total, scanned) {
+    const progressText = document.getElementById('progress-text');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressBar = document.getElementById('progress-bar');
+    
+    const percent = total > 0 ? Math.round((scanned / total) * 100) : 0;
+    
+    if (progressText) {
+        progressText.textContent = `${scanned}/${total} biens scannés`;
+    }
+    
+    if (progressPercent) {
+        progressPercent.textContent = `${percent}%`;
+    }
+    
+    if (progressBar) {
+        progressBar.style.width = `${percent}%`;
+    }
+}
+
+// Exposer globalement
+window.showModeLocalisation = showModeLocalisation;
+window.showModeBien = showModeBien;
+window.updateProgressIndicator = updateProgressIndicator;
 
 /**
  * Met à jour l'interface de la localisation active
@@ -1880,6 +1981,12 @@ async function enregistrerScan(bienId, statut) {
             }
             AppState.scansSession.push(scanData);
             console.log('[Scan] Scan ajouté à la session');
+            
+            // ✨ NOUVEAU : Mettre à jour la progression
+            updateProgressIndicator(
+                AppState.biensAttendus.length,
+                AppState.activeLocation.nombre_biens_scannes
+            );
         } catch (stateError) {
             console.error('[Scan] Erreur mise à jour state:', stateError);
             // Ne pas bloquer si la mise à jour du state échoue
@@ -2228,6 +2335,9 @@ async function confirmTerminerBureau() {
         scannerManager.currentMode = 'localisation';
         console.log('[Scan] Mode changé en "localisation"');
 
+        // Afficher l'indicateur de mode localisation
+        showModeLocalisation();
+
         // Mettre à jour l'UI
         try {
             updateActiveLocationUI();
@@ -2531,6 +2641,14 @@ function attachEventListeners() {
     const btnTerminerBureau = document.getElementById('btn-terminer-bureau');
     if (btnTerminerBureau) {
         btnTerminerBureau.addEventListener('click', () => {
+            showTerminerBureauModal();
+        });
+    }
+
+    // Terminer bureau (bouton dans l'indicateur de mode)
+    const btnTerminerBureauTop = document.getElementById('btn-terminer-bureau-top');
+    if (btnTerminerBureauTop) {
+        btnTerminerBureauTop.addEventListener('click', () => {
             showTerminerBureauModal();
         });
     }
@@ -3066,9 +3184,24 @@ async function init() {
             // Initialiser le scanner
             await scannerManager.init();
             
+            // Afficher le mode initial
+            if (AppState.activeLocation) {
+                // Un bureau est déjà actif (restauré depuis localStorage)
+                showModeBien(
+                    AppState.localisation,
+                    AppState.biensAttendus.length,
+                    AppState.activeLocation.nombre_biens_scannes || 0
+                );
+                scannerManager.currentMode = 'bien';
+            } else {
+                // Aucun bureau actif, mode localisation
+                showModeLocalisation();
+                scannerManager.currentMode = 'localisation';
+            }
+            
             // Afficher la vue scanner
             showView('scanner');
-
+            
             // Mettre à jour le badge des scans en attente
             await SyncManager.updatePendingScansBadge();
 
