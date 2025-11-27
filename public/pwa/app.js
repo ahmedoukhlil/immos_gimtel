@@ -495,10 +495,32 @@ class API {
      * @param {string} code - Code de la localisation
      * @returns {Promise<Object>} Données de la localisation
      */
+    /**
+     * Récupère une localisation par son ID
+     * @param {number} id - ID de la localisation
+     * @returns {Promise<Object>} Données de la localisation
+     */
+    static async getLocalisation(id) {
+        console.log('[API] getLocalisation appelée avec ID:', id);
+        const response = await this.request(`/localisations/${id}`);
+        // Le contrôleur retourne { localisation: {...} }, extraire l'objet localisation
+        const localisation = response?.localisation || response;
+        console.log('[API] Localisation extraite:', localisation);
+        return localisation;
+    }
+
+    /**
+     * Récupère une localisation par son code
+     * @param {string} code - Code de la localisation
+     * @returns {Promise<Object>} Données de la localisation
+     */
     static async getLocalisationByCode(code) {
+        console.log('[API] getLocalisationByCode appelée avec code:', code);
         const response = await this.request(`/localisations/by-code/${encodeURIComponent(code)}`);
         // Le contrôleur retourne { localisation: {...} }, extraire l'objet localisation
-        return response?.localisation || response;
+        const localisation = response?.localisation || response;
+        console.log('[API] Localisation extraite:', localisation);
+        return localisation;
     }
 
     /**
@@ -1176,8 +1198,9 @@ class ScannerManager {
 
         try {
             // Validation des données d'entrée
-            if (!qrData || !qrData.code) {
+            if (!qrData || (!qrData.code && !qrData.id)) {
                 console.error('[Scanner] ✗ Données QR code invalides:', qrData);
+                console.error('[Scanner] Le QR code doit contenir au moins "code" ou "id"');
                 showToast('QR code invalide', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
@@ -1193,27 +1216,42 @@ class ScannerManager {
 
             showToast('Localisation détectée, vérification...', 'info');
 
-            // Récupérer la localisation par code
-            console.log('[Scanner] Appel API getLocalisationByCode avec:', qrData.code);
+            // Récupérer la localisation
             let localisation;
-            try {
-                localisation = await API.getLocalisationByCode(qrData.code);
-                console.log('[Scanner] Localisation reçue:', localisation);
-            } catch (error) {
-                console.error('[Scanner] ✗ Erreur récupération localisation:', error);
-                console.error('[Scanner] Message:', error.message);
-                console.error('[Scanner] Stack:', error.stack);
-                showToast('Erreur lors de la récupération de la localisation', 'error');
+            
+            // Cas 1 : QR contient un ID, essayer de récupérer par ID d'abord
+            if (qrData.id) {
+                console.log('[Scanner] Recherche par ID:', qrData.id);
+                try {
+                    localisation = await API.getLocalisation(qrData.id);
+                    console.log('[Scanner] Localisation trouvée par ID:', localisation);
+                } catch (error) {
+                    console.warn('[Scanner] Localisation non trouvée par ID, tentative par code...');
+                    console.warn('[Scanner] Erreur:', error.message);
+                }
+            }
+
+            // Cas 2 : QR contient un code OU fallback si ID non trouvé
+            if (!localisation && qrData.code) {
+                console.log('[Scanner] Recherche par code:', qrData.code);
+                try {
+                    localisation = await API.getLocalisationByCode(qrData.code);
+                    console.log('[Scanner] Localisation trouvée par code:', localisation);
+                } catch (error) {
+                    console.error('[Scanner] ✗ Erreur récupération localisation par code:', error);
+                    console.error('[Scanner] Message:', error.message);
+                }
+            }
+
+            if (!localisation || !localisation.id) {
+                console.error('[Scanner] ✗ Localisation non trouvée');
+                console.error('[Scanner] Données QR reçues:', qrData);
+                showToast('Localisation non trouvée. Vérifiez le code scanné.', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
 
-            if (!localisation || !localisation.id) {
-                console.error('[Scanner] ✗ Localisation non trouvée pour le code:', qrData.code);
-                showToast('Localisation non trouvée', 'error');
-                setTimeout(() => this.start(), 2000);
-                return;
-            }
+            console.log('[Scanner] ✓ Localisation trouvée:', localisation.code, '(ID:', localisation.id, ')');
 
             // Vérifier que cette localisation est assignée à l'agent
             console.log('[Scanner] Vérification assignation...');

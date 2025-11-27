@@ -90,6 +90,10 @@ Route::prefix('v1')->group(function () {
             Route::get('/by-code/{code}', [LocalisationController::class, 'byCode'])
                 ->name('by-code');
             
+            // Récupérer une localisation par son ID
+            Route::get('/{localisation}', [LocalisationController::class, 'show'])
+                ->name('show');
+            
             // Récupérer tous les biens d'une localisation
             Route::get('/{localisation}/biens', [LocalisationController::class, 'biens'])
                 ->name('biens');
