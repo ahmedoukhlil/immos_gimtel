@@ -1995,6 +1995,15 @@ function attachEventListeners() {
         });
     }
 
+    // Quick access to localisations
+    const quickAccessLocalisations = document.getElementById('quick-access-localisations');
+    if (quickAccessLocalisations) {
+        quickAccessLocalisations.addEventListener('click', () => {
+            showView('mes-localisations');
+            loadMesLocalisations();
+        });
+    }
+
     // Network status
     window.addEventListener('online', () => {
         AppState.isOnline = true;

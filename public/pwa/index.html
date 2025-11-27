@@ -187,6 +187,25 @@
             <!-- Vue: Scanner (cachée initialement) -->
             <div id="view-scanner" class="hidden">
                 
+                <!-- Bouton d'accès rapide aux localisations -->
+                <div class="mb-4">
+                    <button id="quick-access-localisations" class="w-full bg-indigo-50 border-2 border-indigo-200 text-indigo-700 rounded-xl p-4 flex items-center justify-between hover:bg-indigo-100 transition">
+                        <div class="flex items-center space-x-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <div class="text-left">
+                                <p class="font-semibold">Mes localisations assignées</p>
+                                <p class="text-sm text-indigo-600">Voir toutes mes localisations</p>
+                            </div>
+                        </div>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+                
                 <!-- État actuel / Bureau actif -->
                 <div id="current-state" class="mb-4">
                     <!-- État: Aucun bureau -->
