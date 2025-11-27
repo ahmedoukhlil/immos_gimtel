@@ -1172,48 +1172,43 @@ class ScannerManager {
         // LOGIQUE DE ROUTAGE STRICTE
         // ═══════════════════════════════════════════════════════
 
-        // CAS 1 : QR de LOCALISATION scanné
+        // ═══════════════════════════════════════════════════════
+        // ROUTAGE STRICT : TYPE du QR détermine le traitement
+        // ═══════════════════════════════════════════════════════
+
         if (qrData.type === 'localisation') {
-            console.log('[Scanner] ✓ QR de LOCALISATION détecté');
+            // C'est un QR de LOCALISATION (porte de bureau)
+            console.log('[Scanner] ✓ QR de LOCALISATION (porte) détecté');
             
             if (this.currentMode === 'localisation') {
-                console.log('[Scanner] ✓ Mode LOCALISATION actif → OK');
-                console.log('[Scanner] → Démarrage de l\'inventaire de ce bureau');
+                console.log('[Scanner] ✓ Mode LOCALISATION actif → OK pour démarrer bureau');
+                console.log('[Scanner] → Traitement LOCALISATION');
                 await this.handleLocalisationScan(qrData);
-            } else if (this.currentMode === 'bien') {
-                console.warn('[Scanner] ⚠️ Mode BIEN actif, localisation scannée');
-                showToast('⚠️ Terminez d\'abord le bureau en cours avant de scanner un nouveau bureau', 'warning');
+            } else {
+                console.warn('[Scanner] ⚠️ Un bureau est déjà actif');
+                showToast('⚠️ Terminez d\'abord le bureau en cours', 'warning');
                 setTimeout(() => this.start(), 2000);
             }
-        }
-        
-        // CAS 2 : QR de BIEN scanné
-        else if (qrData.type === 'bien') {
-            console.log('[Scanner] ✓ QR de BIEN détecté');
+            
+        } else if (qrData.type === 'bien') {
+            // C'est un QR de BIEN (équipement)
+            console.log('[Scanner] ✓ QR de BIEN (équipement) détecté');
             
             if (this.currentMode === 'bien') {
-                console.log('[Scanner] ✓ Mode BIEN actif → OK');
-                console.log('[Scanner] → Enregistrement du bien dans le bureau actif');
+                console.log('[Scanner] ✓ Mode BIEN actif → OK pour scanner bien');
+                console.log('[Scanner] → Traitement BIEN');
                 await this.handleBienScan(qrData);
-            } else if (this.currentMode === 'localisation') {
-                console.error('[Scanner] ❌ Mode LOCALISATION actif, bien scanné');
-                console.log('[Scanner] → REFUS : Aucun bureau n\'est actif');
-                
-                showToast(
-                    '❌ Vous devez d\'abord scanner le QR code de la PORTE du bureau',
-                    'error',
-                    5000
-                );
-                
+            } else {
+                console.error('[Scanner] ❌ Aucun bureau actif !');
+                console.log('[Scanner] → REFUS : Scanner d\'abord une PORTE');
+                showToast('❌ Scannez d\'abord le QR code de la PORTE du bureau', 'error', 5000);
                 playSound('error');
                 setTimeout(() => this.start(), 3000);
             }
-        }
-        
-        // CAS 3 : Type inconnu
-        else {
-            console.error('[Scanner] ❌ Type de QR non reconnu:', qrData);
-            showToast('QR code non reconnu. Format invalide.', 'error');
+            
+        } else {
+            console.error('[Scanner] ❌ Type de QR non reconnu:', qrData.type);
+            showToast('QR code non reconnu', 'error');
             setTimeout(() => this.start(), 2000);
         }
 
@@ -1340,8 +1335,23 @@ class ScannerManager {
                 );
                 console.log('[Scanner] Réponse API complète:', response);
                 
-                // Le contrôleur retourne { inventaire_localisation: {...} }
-                inventaireLocalisation = response?.inventaire_localisation || response;
+                // ✅ VÉRIFIER que la réponse contient bien inventaire_localisation
+                if (!response || !response.inventaire_localisation) {
+                    console.error('[Scanner] ✗ Réponse API invalide:', response);
+                    
+                    // Gérer le cas "déjà en cours" ou "terminée"
+                    if (response?.statut === 'termine') {
+                        showToast('❌ Ce bureau a déjà été inventorié', 'error');
+                    } else {
+                        showToast('❌ Impossible de démarrer ce bureau', 'error');
+                    }
+                    
+                    setTimeout(() => this.start(), 2000);
+                    return;
+                }
+                
+                // Extraire l'objet inventaire_localisation de la réponse
+                inventaireLocalisation = response.inventaire_localisation;
                 console.log('[Scanner] Inventaire localisation extrait:', inventaireLocalisation);
             } catch (error) {
                 console.error('[Scanner] ✗ Erreur démarrage localisation:', error);

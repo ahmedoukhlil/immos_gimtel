@@ -162,31 +162,39 @@ class InventaireController extends Controller
                 ]
             );
 
-            // Si déjà en cours ou terminé, retourner
-            if (in_array($inventaireLocalisation->statut, ['en_cours', 'termine'])) {
+            // ✅ CAS 1 : Localisation déjà terminée → Erreur
+            if ($inventaireLocalisation->statut === 'termine') {
                 return response()->json([
-                    'message' => 'Localisation déjà en cours ou terminée',
+                    'message' => 'Cette localisation a déjà été inventoriée',
+                    'statut' => 'termine',
                     'inventaire_localisation' => $this->formatInventaireLocalisation($inventaireLocalisation)
-                ]);
-        }
-
-            // Démarrer le scan via le service
-            $result = $this->inventaireService->demarrerLocalisation(
-                $inventaireLocalisation,
-                $request->user()
-            );
-
-            if (!$result) {
-                return response()->json([
-                    'message' => 'Impossible de démarrer le scan'
                 ], 400);
             }
 
-            // Recharger pour avoir les données à jour
-            $inventaireLocalisation->refresh();
+            // ✅ CAS 2 : Localisation déjà en cours → Retourner telle quelle
+            if ($inventaireLocalisation->statut === 'en_cours') {
+                \Log::info('[API] Localisation déjà en cours, retour des données existantes', [
+                    'inventaire_localisation_id' => $inventaireLocalisation->id
+                ]);
+                
+                return response()->json([
+                    'message' => 'Localisation déjà active',
+                    'inventaire_localisation' => $this->formatInventaireLocalisation($inventaireLocalisation)
+                ]);
+            }
 
-        return response()->json([
-                'message' => 'Scan de la localisation démarré',
+            // ✅ CAS 3 : Localisation en attente → Démarrer
+            $inventaireLocalisation->update([
+                'statut' => 'en_cours',
+                'date_debut_scan' => now(),
+            ]);
+
+            \Log::info('[API] Localisation démarrée', [
+                'inventaire_localisation_id' => $inventaireLocalisation->id
+            ]);
+
+            return response()->json([
+                'message' => 'Localisation démarrée',
                 'inventaire_localisation' => $this->formatInventaireLocalisation($inventaireLocalisation)
             ]);
 
