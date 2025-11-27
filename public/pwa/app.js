@@ -459,7 +459,9 @@ class API {
      * @returns {Promise<Array>} Liste des localisations
      */
     static async getMesLocalisations(inventaireId) {
-        return this.request(`/inventaires/${inventaireId}/mes-localisations`);
+        const response = await this.request(`/inventaires/${inventaireId}/mes-localisations`);
+        // Le contrôleur retourne { localisations: [...] }, extraire le tableau
+        return response?.localisations || response || [];
     }
 
     /**
@@ -2018,15 +2020,20 @@ function attachEventListeners() {
  */
 async function loadInventaire() {
     try {
-        const inventaire = await API.getCurrentInventaire();
+        const response = await API.getCurrentInventaire();
         
-        if (!inventaire) {
+        // Le contrôleur retourne { inventaire: {...}, statistiques: {...} }
+        const inventaire = response?.inventaire || response;
+        
+        if (!inventaire || !inventaire.id) {
             showToast('Aucun inventaire en cours', 'warning');
             return;
         }
 
         AppState.inventaire = inventaire;
         localStorage.setItem(CONFIG.STORAGE_KEY_INVENTAIRE, JSON.stringify(inventaire));
+        
+        console.log('[App] Inventaire chargé:', inventaire);
 
         // Charger la localisation active si elle existe
         const savedLocation = localStorage.getItem(CONFIG.STORAGE_KEY_LOCATION);
@@ -2075,9 +2082,41 @@ async function loadMesLocalisations() {
     }
 
     try {
+        // Vérifier qu'un inventaire est chargé
+        if (!AppState.inventaire || !AppState.inventaire.id) {
+            listDiv.innerHTML = `
+                <div class="text-center py-12 text-red-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="font-semibold">Aucun inventaire chargé</p>
+                    <p class="text-sm mt-2">Veuillez vous reconnecter</p>
+                </div>
+            `;
+            return;
+        }
+
         listDiv.innerHTML = '<div class="text-center py-8"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div></div>';
 
         const localisations = await API.getMesLocalisations(AppState.inventaire.id);
+        
+        console.log('[App] Localisations reçues:', localisations);
+        console.log('[App] Type:', Array.isArray(localisations) ? 'Array' : typeof localisations);
+        console.log('[App] Inventaire ID:', AppState.inventaire?.id);
+
+        if (!Array.isArray(localisations)) {
+            console.error('[App] Erreur: localisations n\'est pas un tableau:', localisations);
+            listDiv.innerHTML = `
+                <div class="text-center py-12 text-red-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="font-semibold">Erreur lors du chargement</p>
+                    <p class="text-sm mt-2">Format de réponse inattendu</p>
+                </div>
+            `;
+            return;
+        }
 
         if (localisations.length === 0) {
             listDiv.innerHTML = `
@@ -2085,7 +2124,8 @@ async function loadMesLocalisations() {
                     <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                     </svg>
-                    <p>Aucune localisation assignée</p>
+                    <p class="font-semibold">Aucune localisation assignée</p>
+                    <p class="text-sm mt-2">Contactez votre administrateur pour obtenir des localisations</p>
                 </div>
             `;
             return;
