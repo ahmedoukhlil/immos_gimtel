@@ -1327,69 +1327,50 @@ class ScannerManager {
             console.log('[Scanner] Inventaire ID:', AppState.inventaire.id);
             console.log('[Scanner] Localisation ID:', localisation.id);
             
-            let inventaireLocalisation;
-            try {
-                const response = await API.demarrerLocalisation(
-                    AppState.inventaire.id, 
-                    localisation.id
-                );
-                console.log('[Scanner] Réponse API complète:', response);
+            console.log('[Scanner] Démarrage scan localisation...');
+            const response = await API.demarrerLocalisation(
+                AppState.inventaire.id, 
+                localisation.id
+            );
+            console.log('[Scanner] Réponse API complète:', response);
+            
+            // ✅ VALIDATION CORRECTE : Vérifier que inventaire_localisation existe dans la réponse
+            if (!response || !response.inventaire_localisation) {
+                console.error('[Scanner] ✗ Réponse API invalide:', response);
                 
-                // ✅ VÉRIFIER que la réponse contient bien inventaire_localisation
-                if (!response || !response.inventaire_localisation) {
-                    console.error('[Scanner] ✗ Réponse API invalide:', response);
-                    
-                    // Gérer le cas "déjà en cours" ou "terminée"
-                    if (response?.statut === 'termine') {
-                        showToast('❌ Ce bureau a déjà été inventorié', 'error');
-                    } else {
-                        showToast('❌ Impossible de démarrer ce bureau', 'error');
-                    }
-                    
-                    setTimeout(() => this.start(), 2000);
-                    return;
+                // Gérer les cas spécifiques
+                if (response?.statut === 'termine') {
+                    showToast('❌ Ce bureau a déjà été inventorié', 'error');
+                } else if (response?.message) {
+                    showToast('❌ ' + response.message, 'error');
+                } else {
+                    showToast('❌ Erreur lors du démarrage du bureau', 'error');
                 }
                 
-                // Extraire l'objet inventaire_localisation de la réponse
-                inventaireLocalisation = response.inventaire_localisation;
-                console.log('[Scanner] Inventaire localisation extrait:', inventaireLocalisation);
-            } catch (error) {
-                console.error('[Scanner] ✗ Erreur démarrage localisation:', error);
-                console.error('[Scanner] Message:', error.message);
-                console.error('[Scanner] Status:', error.status);
-                
-                // Message spécifique selon le type d'erreur
-                let message = error.message || 'Erreur lors du démarrage du scan';
-                
-                if (error.message && error.message.includes("n'est pas en cours")) {
-                    message = "❌ L'inventaire n'est pas actif. Contactez l'administrateur.";
-                } else if (error.message && error.message.includes("non assignée")) {
-                    message = "⚠️ Cette localisation ne vous est pas assignée.";
-                } else if (error.message && error.message.includes("non trouvée")) {
-                    message = "❌ Localisation introuvable.";
-                } else if (error.status === 400) {
-                    message = "❌ Erreur: " + (error.message || "Requête invalide");
-                }
-                
-                showToast(message, 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
-
-            if (!inventaireLocalisation || !inventaireLocalisation.id) {
-                console.error('[Scanner] ✗ Inventaire localisation invalide:', inventaireLocalisation);
-                console.error('[Scanner] Réponse complète reçue:', response);
-                showToast('Erreur lors de la création du scan', 'error');
+            
+            // ✅ Extraire l'objet inventaire_localisation de la réponse
+            const inventaireLocalisation = response.inventaire_localisation;
+            console.log('[Scanner] ✓ Inventaire localisation valide:', inventaireLocalisation);
+            
+            // Vérifier que l'objet contient un ID
+            if (!inventaireLocalisation.id) {
+                console.error('[Scanner] ✗ Inventaire localisation sans ID:', inventaireLocalisation);
+                showToast('❌ Données invalides reçues du serveur', 'error');
                 setTimeout(() => this.start(), 2000);
                 return;
             }
+            
+            console.log('[Scanner] ✓ Bureau démarré (ID:', inventaireLocalisation.id, ')');
 
             // Charger les biens attendus
             console.log('[Scanner] Chargement biens attendus...');
             let biens;
             try {
                 biens = await API.getBiensLocalisation(localisation.id);
-                console.log('[Scanner] Biens chargés:', biens?.length || 0, 'biens');
+                console.log('[Scanner] ✓ Biens chargés:', biens?.length || 0, 'biens');
             } catch (error) {
                 console.error('[Scanner] Erreur récupération biens:', error);
                 // Continuer même si les biens ne peuvent pas être chargés
