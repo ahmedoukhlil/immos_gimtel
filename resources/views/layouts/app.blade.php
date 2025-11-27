@@ -338,40 +338,53 @@
     </div>
 
     <script>
+        // Messages flash de session (échappés pour éviter les erreurs JavaScript)
+        var sessionMessages = {
+            success: @json(session('success', null)),
+            error: @json(session('error', null)),
+            info: @json(session('info', null)),
+            warning: @json(session('warning', null))
+        };
+        
         function toastNotifications() {
             return {
                 toasts: [],
                 init() {
                     // Écouter les messages flash de session
-                    @if(session('success'))
-                        this.add('{{ session('success') }}', 'success');
-                    @endif
-                    @if(session('error'))
-                        this.add('{{ session('error') }}', 'error');
-                    @endif
-                    @if(session('info'))
-                        this.add('{{ session('info') }}', 'info');
-                    @endif
-                    @if(session('warning'))
-                        this.add('{{ session('warning') }}', 'warning');
-                    @endif
+                    if (sessionMessages.success) {
+                        this.add(sessionMessages.success, 'success');
+                    }
+                    if (sessionMessages.error) {
+                        this.add(sessionMessages.error, 'error');
+                    }
+                    if (sessionMessages.info) {
+                        this.add(sessionMessages.info, 'info');
+                    }
+                    if (sessionMessages.warning) {
+                        this.add(sessionMessages.warning, 'warning');
+                    }
                 },
-                add(message, type = 'info') {
-                    const toast = {
-                        message,
-                        type,
+                add(message, type) {
+                    if (typeof type === 'undefined') {
+                        type = 'info';
+                    }
+                    var toast = {
+                        message: message,
+                        type: type,
                         show: true
                     };
                     this.toasts.push(toast);
-                    setTimeout(() => {
-                        this.removeToast(this.toasts.indexOf(toast));
+                    var self = this;
+                    setTimeout(function() {
+                        self.removeToast(self.toasts.indexOf(toast));
                     }, 5000);
                 },
                 removeToast(index) {
                     if (index > -1) {
+                        var self = this;
                         this.toasts[index].show = false;
-                        setTimeout(() => {
-                            this.toasts.splice(index, 1);
+                        setTimeout(function() {
+                            self.toasts.splice(index, 1);
                         }, 300);
                     }
                 }
@@ -383,26 +396,69 @@
     
     {{-- PWA Service Worker Registration --}}
     <script>
+        // Gestion de l'installation PWA (définir avant le bloc if pour être accessible globalement)
+        let deferredPrompt;
+        
+        // Fonction pour afficher le bouton d'installation
+        function showInstallButton() {
+            // Vérifier si l'app n'est pas déjà installée
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                return; // Déjà installée
+            }
+            
+            // Créer un bouton d'installation si nécessaire
+            let installBtn = document.getElementById('pwa-install-btn');
+            if (!installBtn) {
+                installBtn = document.createElement('button');
+                installBtn.id = 'pwa-install-btn';
+                installBtn.className = 'fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 hover:bg-indigo-700 transition';
+                installBtn.innerHTML = '📱 Installer l\'app';
+                installBtn.onclick = installPWA;
+                document.body.appendChild(installBtn);
+            }
+        }
+        
+        // Fonction pour installer l'application
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function(choiceResult) {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('✅ Application installée par l\'utilisateur');
+                    } else {
+                        console.log('❌ Installation refusée par l\'utilisateur');
+                    }
+                    deferredPrompt = null;
+                    
+                    // Masquer le bouton après installation
+                    const installBtn = document.getElementById('pwa-install-btn');
+                    if (installBtn) {
+                        installBtn.remove();
+                    }
+                });
+            }
+        }
+        
         // Enregistrement du Service Worker pour PWA
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
+            window.addEventListener('load', function() {
                 navigator.serviceWorker.register('{{ asset('sw.js') }}')
-                    .then((registration) => {
+                    .then(function(registration) {
                         console.log('✅ Service Worker enregistré avec succès:', registration.scope);
                         
                         // Vérifier les mises à jour périodiquement
-                        setInterval(() => {
+                        setInterval(function() {
                             registration.update();
                         }, 60000); // Vérifier toutes les minutes
                     })
-                    .catch((error) => {
+                    .catch(function(error) {
                         console.error('❌ Erreur lors de l\'enregistrement du Service Worker:', error);
                     });
             });
             
             // Gestion de l'installation PWA
-            let deferredPrompt;
-            window.addEventListener('beforeinstallprompt', (e) => {
+            window.addEventListener('beforeinstallprompt', function(e) {
                 // Empêcher l'affichage automatique du prompt
                 e.preventDefault();
                 deferredPrompt = e;
@@ -411,49 +467,8 @@
                 showInstallButton();
             });
             
-            // Fonction pour afficher le bouton d'installation
-            function showInstallButton() {
-                // Vérifier si l'app n'est pas déjà installée
-                if (window.matchMedia('(display-mode: standalone)').matches || 
-                    window.navigator.standalone === true) {
-                    return; // Déjà installée
-                }
-                
-                // Créer un bouton d'installation si nécessaire
-                let installBtn = document.getElementById('pwa-install-btn');
-                if (!installBtn) {
-                    installBtn = document.createElement('button');
-                    installBtn.id = 'pwa-install-btn';
-                    installBtn.className = 'fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 hover:bg-indigo-700 transition';
-                    installBtn.innerHTML = '📱 Installer l\'app';
-                    installBtn.onclick = installPWA;
-                    document.body.appendChild(installBtn);
-                }
-            }
-            
-            // Fonction pour installer l'application
-            function installPWA() {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            console.log('✅ Application installée par l\'utilisateur');
-                        } else {
-                            console.log('❌ Installation refusée par l\'utilisateur');
-                        }
-                        deferredPrompt = null;
-                        
-                        // Masquer le bouton après installation
-                        const installBtn = document.getElementById('pwa-install-btn');
-                        if (installBtn) {
-                            installBtn.remove();
-                        }
-                    });
-                }
-            }
-            
             // Masquer le bouton si l'app est déjà installée
-            window.addEventListener('appinstalled', () => {
+            window.addEventListener('appinstalled', function() {
                 console.log('✅ Application installée avec succès');
                 const installBtn = document.getElementById('pwa-install-btn');
                 if (installBtn) {
@@ -484,7 +499,7 @@
                 clearTimeout(timeoutId);
                 const timeUntilWarning = SESSION_TIMEOUT - WARNING_TIME;
                 
-                timeoutId = setTimeout(() => {
+                timeoutId = setTimeout(function() {
                     if (!warningShown) {
                         showSessionWarning();
                         warningShown = true;
@@ -495,33 +510,36 @@
             // Fonction pour afficher l'avertissement
             function showSessionWarning() {
                 const minutesLeft = Math.floor(WARNING_TIME / 60000);
-                const message = `Votre session expirera dans ${minutesLeft} minute${minutesLeft > 1 ? 's' : ''} d'inactivité. Cliquez sur "Prolonger" pour continuer.`;
+                const minuteText = minutesLeft > 1 ? 'minutes' : 'minute';
+                const message = 'Votre session expirera dans ' + minutesLeft + ' ' + minuteText + ' d\'inactivité. Cliquez sur "Prolonger" pour continuer.';
                 
                 // Créer une notification
                 const notification = document.createElement('div');
                 notification.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg shadow-lg z-50 max-w-md';
-                notification.innerHTML = `
-                    <div class="flex items-start">
-                        <svg class="w-5 h-5 text-yellow-400 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                        </svg>
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-yellow-800 mb-3">${message}</p>
-                            <div class="flex space-x-2">
-                                <button onclick="extendSession()" class="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors">
-                                    Prolonger la session
-                                </button>
-                                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors">
-                                    Fermer
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                
+                // Construire le HTML de la notification
+                const notificationHTML = '<div class="flex items-start">' +
+                    '<svg class="w-5 h-5 text-yellow-400 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">' +
+                    '<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>' +
+                    '</svg>' +
+                    '<div class="flex-1">' +
+                    '<p class="text-sm font-medium text-yellow-800 mb-3">' + message + '</p>' +
+                    '<div class="flex space-x-2">' +
+                    '<button onclick="extendSession()" class="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors">' +
+                    'Prolonger la session' +
+                    '</button>' +
+                    '<button onclick="this.parentElement.parentElement.parentElement.remove()" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 transition-colors">' +
+                    'Fermer' +
+                    '</button>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+                
+                notification.innerHTML = notificationHTML;
                 document.body.appendChild(notification);
                 
                 // Auto-supprimer après 10 secondes si pas d'action
-                setTimeout(() => {
+                setTimeout(function() {
                     if (notification.parentElement) {
                         notification.remove();
                     }
@@ -531,7 +549,8 @@
             // Fonction pour prolonger la session
             window.extendSession = function() {
                 // Faire une requête pour mettre à jour la session
-                fetch('{{ route('dashboard') }}', {
+                var dashboardUrl = '/dashboard';
+                fetch(dashboardUrl, {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
@@ -539,23 +558,23 @@
                     },
                     credentials: 'same-origin'
                 })
-                .then(() => {
+                .then(function() {
                     resetTimer();
                     // Supprimer toutes les notifications d'avertissement
-                    document.querySelectorAll('.fixed.top-4.left-1\\/2').forEach(el => {
+                    document.querySelectorAll('.fixed.top-4.left-1\\/2').forEach(function(el) {
                         if (el.textContent.includes('session expirera')) {
                             el.remove();
                         }
                     });
                 })
-                .catch(err => {
+                .catch(function(err) {
                     console.error('Erreur lors de la prolongation de session:', err);
                 });
             };
             
             // Écouter les événements d'activité utilisateur
             const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-            events.forEach(event => {
+            events.forEach(function(event) {
                 document.addEventListener(event, resetTimer, { passive: true });
             });
             

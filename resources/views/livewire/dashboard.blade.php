@@ -246,58 +246,66 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             @if($inventaireEnCours && !empty($repartitionStatuts))
-                // Graphique Pie - Répartition statuts
-                const statutsCtx = document.getElementById('statutsChart');
-                if (statutsCtx) {
-                    new Chart(statutsCtx, {
-                        type: 'pie',
-                        data: {
-                            labels: ['Présents', 'Déplacés', 'Absents', 'Détériorés'],
-                            datasets: [{
-                                data: [
-                                    {{ $repartitionStatuts['present'] ?? 0 }},
-                                    {{ $repartitionStatuts['deplace'] ?? 0 }},
-                                    {{ $repartitionStatuts['absent'] ?? 0 }},
-                                    {{ $repartitionStatuts['deteriore'] ?? 0 }}
-                                ],
-                                backgroundColor: [
-                                    'rgba(34, 197, 94, 0.8)',  // Vert pour présents
-                                    'rgba(249, 115, 22, 0.8)', // Orange pour déplacés
-                                    'rgba(239, 68, 68, 0.8)',  // Rouge pour absents
-                                    'rgba(107, 114, 128, 0.8)' // Gris pour détériorés
-                                ],
-                                borderColor: [
-                                    'rgb(34, 197, 94)',
-                                    'rgb(249, 115, 22)',
-                                    'rgb(239, 68, 68)',
-                                    'rgb(107, 114, 128)'
-                                ],
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom'
-                                }
+            // Graphique Pie - Répartition statuts
+            var statutsCtx = document.getElementById('statutsChart');
+            if (statutsCtx) {
+                var repartitionData = {
+                    present: {{ $repartitionStatuts['present'] ?? 0 }},
+                    deplace: {{ $repartitionStatuts['deplace'] ?? 0 }},
+                    absent: {{ $repartitionStatuts['absent'] ?? 0 }},
+                    deteriore: {{ $repartitionStatuts['deteriore'] ?? 0 }}
+                };
+                
+                new Chart(statutsCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Présents', 'Déplacés', 'Absents', 'Détériorés'],
+                        datasets: [{
+                            data: [
+                                repartitionData.present,
+                                repartitionData.deplace,
+                                repartitionData.absent,
+                                repartitionData.deteriore
+                            ],
+                            backgroundColor: [
+                                'rgba(34, 197, 94, 0.8)',
+                                'rgba(249, 115, 22, 0.8)',
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(107, 114, 128, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgb(34, 197, 94)',
+                                'rgb(249, 115, 22)',
+                                'rgb(239, 68, 68)',
+                                'rgb(107, 114, 128)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
                             }
                         }
-                    });
-                }
+                    }
+                });
+            }
 
-                // Graphique Bar - Progression par service
-                const servicesCtx = document.getElementById('servicesChart');
-                if (servicesCtx && @json($progressionParService).length > 0) {
-                    const servicesData = @json($progressionParService);
+            // Graphique Bar - Progression par service
+            var servicesCtx = document.getElementById('servicesChart');
+            if (servicesCtx) {
+                var progressionData = @json($progressionParService ?? []);
+                if (progressionData && progressionData.length > 0) {
                     new Chart(servicesCtx, {
                         type: 'bar',
                         data: {
-                            labels: servicesData.map(item => item.service),
+                            labels: progressionData.map(function(item) { return item.service; }),
                             datasets: [{
                                 label: 'Progression (%)',
-                                data: servicesData.map(item => item.progression),
+                                data: progressionData.map(function(item) { return item.progression; }),
                                 backgroundColor: 'rgba(59, 130, 246, 0.8)',
                                 borderColor: 'rgb(59, 130, 246)',
                                 borderWidth: 2
@@ -325,6 +333,7 @@
                         }
                     });
                 }
+            }
             @endif
         });
 

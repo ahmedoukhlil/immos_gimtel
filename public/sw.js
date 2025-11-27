@@ -97,9 +97,40 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Ignorer les routes de l'application principale (pas de la PWA)
+  // Ces routes sont souvent redirigées et ne doivent pas être mises en cache
+  const appRoutes = [
+    '/dashboard',
+    '/localisations',
+    '/biens',
+    '/inventaires',
+    '/users',
+    '/rapports',
+    '/settings',
+    '/login',
+    '/logout'
+  ];
+  
+  if (appRoutes.some(route => url.pathname.startsWith(route))) {
+    // Laisser le navigateur gérer ces routes normalement (sans interception)
+    return;
+  }
+
+  // Ignorer les requêtes avec des redirections (mode redirect)
+  // Les redirections ne peuvent pas être mises en cache correctement
+  if (request.redirect === 'follow' && url.search.includes('#')) {
+    return;
+  }
+
   event.respondWith(
-    fetch(request)
+    fetch(request, { redirect: 'follow' })
       .then((response) => {
+        // Ignorer les réponses de redirection (3xx)
+        if (response.redirected || response.status >= 300 && response.status < 400) {
+          // Ne pas mettre en cache les redirections
+          return response;
+        }
+
         // Vérifier que la réponse est valide
         if (!response || response.status !== 200 || response.type === 'error') {
           // Si la réponse n'est pas valide, essayer le cache
@@ -116,12 +147,30 @@ self.addEventListener('fetch', (event) => {
         const responseToCache = response.clone();
 
         // Mettre en cache les réponses réussies (uniquement pour le même domaine)
-        if (response.status === 200 && url.origin === location.origin) {
-          caches.open(RUNTIME_CACHE).then((cache) => {
-            cache.put(request, responseToCache).catch((error) => {
-              console.warn('[Service Worker] Erreur lors de la mise en cache:', error);
+        // Ne pas mettre en cache les réponses HTML de l'application principale
+        const isHTML = response.headers.get('content-type')?.includes('text/html');
+        const appRoutesList = [
+          '/dashboard',
+          '/localisations',
+          '/biens',
+          '/inventaires',
+          '/users',
+          '/rapports',
+          '/settings',
+          '/login',
+          '/logout'
+        ];
+        const isAppRoute = appRoutesList.some(route => url.pathname.startsWith(route));
+        
+        if (response.status === 200 && url.origin === location.origin && !isAppRoute) {
+          // Ne mettre en cache que les assets statiques, pas les pages HTML de l'app
+          if (!isHTML || url.pathname.startsWith('/pwa/')) {
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseToCache).catch((error) => {
+                console.warn('[Service Worker] Erreur lors de la mise en cache:', error);
+              });
             });
-          });
+          }
         }
 
         return response;
