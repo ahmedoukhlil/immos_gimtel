@@ -225,6 +225,11 @@
                     <span class="text-2xl mr-2">📋</span>
                     <span class="font-medium">Démarrer inventaire</span>
                 </a>
+                <a href="{{ route('users.index') }}" 
+                   class="flex items-center justify-center px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors">
+                    <span class="text-2xl mr-2">👥</span>
+                    <span class="font-medium">Gérer les utilisateurs</span>
+                </a>
                 {{-- Route rapports désactivée pour l'instant --}}
                 {{-- <a href="{{ route('rapports.index') }}" 
                    class="flex items-center justify-center px-4 py-3 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors">

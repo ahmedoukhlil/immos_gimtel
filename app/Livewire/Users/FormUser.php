@@ -29,18 +29,28 @@ class FormUser extends Component
 
     /**
      * Initialisation du composant
+     * 
+     * @param User|int|string|null $user Instance de l'utilisateur pour l'édition, ID, ou null pour la création
      */
     public function mount($user = null): void
     {
         if ($user) {
-            $this->isEdit = true;
-            $this->userId = $user->id;
-            $this->name = $user->name;
-            $this->email = $user->email;
-            $this->role = $user->role;
-            $this->telephone = $user->telephone ?? '';
-            $this->service = $user->service ?? '';
-            $this->actif = $user->actif;
+            // Si $user est une chaîne ou un entier (ID), charger l'utilisateur
+            if (is_string($user) || is_int($user)) {
+                $user = User::findOrFail($user);
+            }
+            
+            // Vérifier que $user est bien une instance de User
+            if ($user instanceof User) {
+                $this->isEdit = true;
+                $this->userId = $user->id;
+                $this->name = $user->name;
+                $this->email = $user->email;
+                $this->role = $user->role;
+                $this->telephone = $user->telephone ?? '';
+                $this->service = $user->service ?? '';
+                $this->actif = $user->actif;
+            }
         }
     }
 
