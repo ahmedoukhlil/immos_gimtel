@@ -759,3 +759,63 @@ img {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
 }
+
+/* ============================================
+   LOGIN PAGE STYLES
+   ============================================ */
+
+/* Animation d'entrée pour la page de login */
+#view-login {
+    animation: fadeInUp 0.4s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Amélioration des inputs de login */
+#login-email:focus,
+#login-password:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Animation du bouton de connexion */
+#login-btn:active {
+    transform: scale(0.98);
+}
+
+#login-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Animation du message d'erreur */
+#login-error {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* S'assurer que le header et le menu sont cachés sur la page de login */
+#app-header.hidden,
+#menu-drawer.hidden {
+    display: none !important;
+}

@@ -852,6 +852,32 @@ function showView(viewName) {
     console.log('[UI] Paramètre viewName:', viewName);
     console.log('[UI] ID recherché:', `view-${viewName}`);
     
+    // Masquer/afficher le header et le menu selon la vue
+    const header = document.getElementById('app-header') || document.querySelector('header');
+    const menuBtn = document.getElementById('menu-btn');
+    const menuDrawer = document.getElementById('menu-drawer');
+    
+    if (viewName === 'login') {
+        // Cacher le header et le menu sur la page de login
+        if (header) header.classList.add('hidden');
+        if (menuBtn) menuBtn.classList.add('hidden');
+        if (menuDrawer) menuDrawer.classList.add('hidden');
+        // Ajuster le padding du main pour la page de login (pas de header)
+        const main = document.getElementById('main-content');
+        if (main) {
+            main.style.paddingTop = '2rem';
+        }
+    } else {
+        // Afficher le header et le menu sur les autres pages
+        if (header) header.classList.remove('hidden');
+        if (menuBtn) menuBtn.classList.remove('hidden');
+        // Restaurer le padding normal du main
+        const main = document.getElementById('main-content');
+        if (main) {
+            main.style.paddingTop = '7rem';
+        }
+    }
+    
     // Lister toutes les vues existantes
     const allViews = document.querySelectorAll('[id^="view-"]');
     console.log('[UI] Vues trouvées dans le DOM:', Array.from(allViews).map(v => v.id));
@@ -2513,7 +2539,12 @@ function attachEventListeners() {
 
             if (!email || !password) {
                 if (errorDiv) {
-                    errorDiv.textContent = 'Veuillez remplir tous les champs';
+                    const errorText = errorDiv.querySelector('p');
+                    if (errorText) {
+                        errorText.textContent = 'Veuillez remplir tous les champs';
+                    } else {
+                        errorDiv.textContent = 'Veuillez remplir tous les champs';
+                    }
                     errorDiv.classList.remove('hidden');
                 }
                 return;
@@ -2533,7 +2564,12 @@ function attachEventListeners() {
                 await scannerManager.init();
             } else {
                 if (errorDiv) {
-                    errorDiv.textContent = result.error;
+                    const errorText = errorDiv.querySelector('p');
+                    if (errorText) {
+                        errorText.textContent = result.error || 'Erreur de connexion';
+                    } else {
+                        errorDiv.textContent = result.error || 'Erreur de connexion';
+                    }
                     errorDiv.classList.remove('hidden');
                 }
                 if (loginBtn) loginBtn.disabled = false;
