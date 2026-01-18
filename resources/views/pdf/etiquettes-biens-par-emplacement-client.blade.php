@@ -113,10 +113,61 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .breadcrumb {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .breadcrumb nav {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .breadcrumb a {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+            color: #4f46e5;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        .breadcrumb a:hover {
+            color: #4338ca;
+        }
+        .breadcrumb svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 4px;
+        }
+        .breadcrumb span {
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .breadcrumb .current {
+            color: #374151;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        {{-- Breadcrumb --}}
+        <div class="breadcrumb">
+            <nav aria-label="Breadcrumb">
+                <a href="{{ route('dashboard') }}">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                    </svg>
+                    Dashboard
+                </a>
+                <span>/</span>
+                <a href="{{ route('biens.index') }}">Immobilisations</a>
+                <span>/</span>
+                <span class="current">Impression des étiquettes</span>
+            </nav>
+        </div>
+
         <div class="header">
             <h1>Étiquettes - {{ $emplacement->Emplacement ?? 'N/A' }}</h1>
             <div class="header-info">
@@ -128,7 +179,7 @@
             <button class="btn btn-primary" onclick="generatePDF()">
                 Générer le PDF
             </button>
-            <button class="btn btn-secondary" onclick="window.print()" id="printBtn" style="display: none;">
+            <button class="btn btn-secondary" onclick="printPDF()" id="printBtn" style="display: none;">
                 Imprimer
             </button>
             <button class="btn btn-secondary" onclick="window.close()">
@@ -137,7 +188,7 @@
         </div>
 
         <div class="status info" id="status">
-            Cliquez sur "Générer le PDF" pour créer les étiquettes (21 par page A4 - 3 colonnes × 7 lignes)
+            Cliquez sur "Générer le PDF" pour créer les étiquettes (33 par page A4 - 3 colonnes × 11 lignes)
         </div>
 
         <div class="preview" id="preview">
@@ -170,10 +221,10 @@
         const USABLE_WIDTH = A4_WIDTH - (MARGIN * 2);
         const USABLE_HEIGHT = A4_HEIGHT - (MARGIN * 2);
         
-        // Grille 3 colonnes × 7 lignes = 21 étiquettes
+        // Grille 3 colonnes × 11 lignes = 33 étiquettes
         const COLS = 3;
-        const ROWS = 7;
-        const TOTAL_LABELS = COLS * ROWS; // 21
+        const ROWS = 11;
+        const TOTAL_LABELS = COLS * ROWS; // 33
         
         // Espacement entre étiquettes en points (3mm = 8.5 points pour éviter les chevauchements)
         const GAP = 8.5;
@@ -231,7 +282,7 @@
 
                         if (!barcodeValue) continue;
 
-                        // Calculer la position de l'étiquette (3 colonnes × 7 lignes)
+                        // Calculer la position de l'étiquette (3 colonnes × 11 lignes)
                         const col = i % COLS;
                         const row = Math.floor(i / COLS);
 
@@ -329,18 +380,6 @@
                         // Nettoyer le canvas temporaire
                         document.body.removeChild(canvas);
                     }
-
-                    // Ajouter un en-tête sur la première page (seulement l'emplacement)
-                    if (pageIndex === 0) {
-                        page.setFont(fontBold);
-                        page.setFontSize(12);
-                        page.drawText(`Emplacement: ${emplacementName}`, {
-                            x: MARGIN,
-                            y: A4_HEIGHT - 20,
-                            size: 12,
-                            color: PDFLib.rgb(0, 0, 0)
-                        });
-                    }
                 }
 
                 // Générer le PDF
@@ -359,7 +398,7 @@
 
                 // Auto-impression après un court délai
                 setTimeout(() => {
-                    window.print();
+                    printPDF();
                 }, 500);
 
             } catch (error) {
@@ -367,6 +406,28 @@
                 statusDiv.className = 'status error';
                 statusDiv.textContent = 'Erreur lors de la génération du PDF: ' + error.message;
                 loadingDiv.style.display = 'none';
+            }
+        }
+
+        // Fonction pour imprimer le PDF dans l'iframe
+        function printPDF() {
+            const pdfContainer = document.getElementById('pdfContainer');
+            if (pdfContainer && pdfContainer.contentWindow) {
+                try {
+                    pdfContainer.contentWindow.print();
+                } catch (error) {
+                    console.error('Erreur lors de l\'impression du PDF:', error);
+                    // Fallback: ouvrir le PDF dans une nouvelle fenêtre pour impression
+                    const pdfUrl = pdfContainer.src;
+                    if (pdfUrl) {
+                        const printWindow = window.open(pdfUrl, '_blank');
+                        if (printWindow) {
+                            printWindow.onload = function() {
+                                printWindow.print();
+                            };
+                        }
+                    }
+                }
             }
         }
 

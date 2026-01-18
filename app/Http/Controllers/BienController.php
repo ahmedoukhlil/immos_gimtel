@@ -208,7 +208,7 @@ class BienController extends Controller
     /**
      * Affiche la page pour imprimer les étiquettes groupées par emplacement
      * 
-     * Disposition : 21 étiquettes par page A4 (3 colonnes x 7 lignes)
+     * Disposition : 33 étiquettes par page A4 (3 colonnes x 11 lignes)
      * Format : Groupé par emplacement, génération côté client avec jsbarcode et pdf-lib
      * 
      * @param Request $request

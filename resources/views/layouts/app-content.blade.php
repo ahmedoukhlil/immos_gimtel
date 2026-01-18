@@ -8,33 +8,33 @@
         x-transition:leave="transition ease-in duration-300"
         x-transition:leave-start="translate-x-0"
         x-transition:leave-end="-translate-x-full"
-        class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-gray-800 text-white flex flex-col"
+        class="fixed md:static inset-y-0 left-0 z-50 w-56 sm:w-64 bg-gray-800 text-white flex flex-col"
         x-cloak
     >
         <!-- Logo -->
-        <div class="flex items-center justify-between h-16 px-6 bg-gray-900 border-b border-gray-700">
-            <div class="flex items-center space-x-2">
-                <span class="text-2xl">📦</span>
-                <span class="font-bold text-lg">Inventaire Pro</span>
+        <div class="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 bg-gray-900 border-b border-gray-700">
+            <div class="flex items-center space-x-2 min-w-0">
+                <span class="text-xl sm:text-2xl flex-shrink-0">📦</span>
+                <span class="font-bold text-base sm:text-lg truncate">Inventaire Pro</span>
             </div>
-            <button @click="sidebarOpen = false" class="md:hidden text-gray-400 hover:text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button @click="sidebarOpen = false" class="md:hidden text-gray-400 hover:text-white p-1 flex-shrink-0">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
 
         <!-- Navigation -->
-        <nav class="flex-1 overflow-y-auto py-4 px-3">
-            <ul class="space-y-1">
+        <nav class="flex-1 overflow-y-auto py-3 sm:py-4 px-2 sm:px-3">
+            <ul class="space-y-0.5 sm:space-y-1">
                 <!-- Dashboard -->
                 <li>
                     <a href="{{ route('dashboard') }}" 
-                       class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('dashboard') ? 'bg-gray-700 text-white' : '' }}">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('dashboard') ? 'bg-gray-700 text-white' : '' }}">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
-                        <span>Dashboard</span>
+                        <span class="truncate">Dashboard</span>
                     </a>
                 </li>
 
@@ -43,45 +43,45 @@
                         <!-- Localisations -->
                         <li>
                             <a href="{{ route('localisations.index') }}" 
-                               class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('localisations.*') ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('localisations.*') ? 'bg-gray-700 text-white' : '' }}">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 </svg>
-                                <span>Localisations</span>
+                                <span class="truncate">Localisations</span>
                             </a>
                         </li>
 
                         <!-- Biens -->
                         <li>
                             <a href="{{ route('biens.index') }}" 
-                               class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('biens.*') ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('biens.*') ? 'bg-gray-700 text-white' : '' }}">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                                 </svg>
-                                <span>Biens</span>
+                                <span class="truncate">Biens</span>
                             </a>
                         </li>
 
                         <!-- Inventaires -->
                         <li>
                             <a href="{{ route('inventaires.index') }}" 
-                               class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('inventaires.*') ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('inventaires.*') ? 'bg-gray-700 text-white' : '' }}">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                                 </svg>
-                                <span>Inventaires</span>
+                                <span class="truncate">Inventaires</span>
                             </a>
                         </li>
 
                         <!-- Rapports -->
                         <li>
                             <a href="{{ route('rapports.index') }}" 
-                               class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('rapports.*') ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('rapports.*') ? 'bg-gray-700 text-white' : '' }}">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                 </svg>
-                                <span>Rapports</span>
+                                <span class="truncate">Rapports</span>
                             </a>
                         </li>
                     @endif
@@ -90,23 +90,23 @@
                         <!-- Utilisateurs -->
                         <li>
                             <a href="{{ route('users.index') }}" 
-                               class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('users.*') ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('users.*') ? 'bg-gray-700 text-white' : '' }}">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                 </svg>
-                                <span>Utilisateurs</span>
+                                <span class="truncate">Utilisateurs</span>
                             </a>
                         </li>
 
                         <!-- Paramètres -->
                         <li>
                             <a href="{{ route('settings.index') }}" 
-                               class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('settings.*') ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('settings.*') ? 'bg-gray-700 text-white' : '' }}">
+                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                 </svg>
-                                <span>Paramètres</span>
+                                <span class="truncate">Paramètres</span>
                             </a>
                         </li>
                     @endif
@@ -115,11 +115,11 @@
         </nav>
 
         <!-- Footer Sidebar -->
-        <div class="px-4 py-4 border-t border-gray-700">
-            <div class="text-xs text-gray-400 mb-2">
+        <div class="px-3 sm:px-4 py-3 sm:py-4 border-t border-gray-700">
+            <div class="text-xs text-gray-400 mb-1.5 sm:mb-2">
                 Version 1.0.0
             </div>
-            <a href="#" class="text-sm text-gray-300 hover:text-white transition-colors">
+            <a href="#" class="text-xs sm:text-sm text-gray-300 hover:text-white transition-colors">
                 Aide
             </a>
         </div>
@@ -142,58 +142,73 @@
     <!-- Main Content -->
     <div class="flex-1 flex flex-col overflow-hidden">
         <!-- Header -->
-        <header class="bg-white border-b border-gray-200 shadow-sm h-16 flex items-center justify-between px-4 md:px-6 z-30">
+        <header class="bg-white border-b border-gray-200 shadow-sm min-h-16 flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-0 z-30">
             <!-- Left: Hamburger + Breadcrumb -->
-            <div class="flex items-center space-x-4">
-                <button @click="sidebarOpen = !sidebarOpen" class="md:hidden text-gray-500 hover:text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
+                <button @click="sidebarOpen = !sidebarOpen" class="md:hidden text-gray-500 hover:text-gray-700 p-1.5 sm:p-2 flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
                 </button>
 
-                <!-- Breadcrumb -->
-                <nav class="hidden md:flex items-center space-x-2 text-sm text-gray-500">
-                    <a href="{{ route('dashboard') }}" class="hover:text-gray-700">Dashboard</a>
+                <!-- Breadcrumb Desktop -->
+                <nav class="hidden lg:flex items-center space-x-2 text-sm text-gray-500 flex-shrink-0">
+                    <a href="{{ route('dashboard') }}" class="hover:text-gray-700 whitespace-nowrap">Dashboard</a>
                     @if(isset($breadcrumbs))
                         @foreach($breadcrumbs as $breadcrumb)
                             <span>/</span>
-                            <a href="{{ $breadcrumb['url'] ?? '#' }}" class="hover:text-gray-700">{{ $breadcrumb['label'] }}</a>
+                            <a href="{{ $breadcrumb['url'] ?? '#' }}" class="hover:text-gray-700 whitespace-nowrap">{{ $breadcrumb['label'] }}</a>
                         @endforeach
+                    @endif
+                </nav>
+
+                <!-- Breadcrumb Mobile/Tablet - Version compacte -->
+                <nav class="lg:hidden flex items-center space-x-1 text-xs sm:text-sm text-gray-500 min-w-0 overflow-hidden">
+                    @if(isset($breadcrumbs) && count($breadcrumbs) > 0)
+                        @php
+                            $lastBreadcrumb = end($breadcrumbs);
+                            reset($breadcrumbs);
+                        @endphp
+                        <a href="{{ $lastBreadcrumb['url'] ?? route('dashboard') }}" class="hover:text-gray-700 truncate">
+                            {{ $lastBreadcrumb['label'] ?? 'Dashboard' }}
+                        </a>
+                    @else
+                        <a href="{{ route('dashboard') }}" class="hover:text-gray-700 truncate">Dashboard</a>
                     @endif
                 </nav>
             </div>
 
             <!-- Right: Notifications + Profile -->
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-shrink-0">
                 @auth
                     <!-- Notifications -->
-                    <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button class="relative p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                        <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
                         </svg>
-                        <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        <span class="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full"></span>
                     </button>
 
                     <!-- Profile Dropdown -->
                     <div class="relative" x-data="{ open: false }">
                         <button 
                             @click="open = !open"
-                            class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            class="flex items-center space-x-1 sm:space-x-2 md:space-x-3 p-1 sm:p-1.5 md:p-2 rounded-lg hover:bg-gray-100 transition-colors"
                         >
-                            <div class="flex items-center space-x-2">
-                                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
+                            <div class="flex items-center space-x-1 sm:space-x-2">
+                                <div class="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-xs sm:text-sm flex-shrink-0">
                                     {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                                 </div>
-                                <div class="hidden md:block text-left">
-                                    <div class="text-sm font-medium text-gray-900">{{ auth()->user()->name }}</div>
-                                    <div class="text-xs text-gray-500">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ auth()->user()->role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' }}">
+                                <div class="hidden sm:block text-left">
+                                    <div class="text-xs sm:text-sm font-medium text-gray-900 leading-tight">{{ auth()->user()->name }}</div>
+                                    <div class="text-xs text-gray-500 mt-0.5">
+                                        <span class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium {{ auth()->user()->role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' }}">
                                             {{ auth()->user()->role_name }}
                                         </span>
                                     </div>
                                 </div>
                             </div>
-                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                             </svg>
                         </button>
@@ -208,15 +223,15 @@
                             x-transition:leave="transition ease-in duration-75"
                             x-transition:leave-start="transform opacity-100 scale-100"
                             x-transition:leave-end="transform opacity-0 scale-95"
-                            class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200"
+                            class="absolute right-0 mt-2 w-44 sm:w-48 bg-white rounded-lg shadow-lg py-1 z-50 border border-gray-200"
                             x-cloak
                         >
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mon profil</a>
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Paramètres</a>
+                            <a href="#" class="block px-3 sm:px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mon profil</a>
+                            <a href="#" class="block px-3 sm:px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Paramètres</a>
                             <hr class="my-1">
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
-                                <button type="submit" class="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                <button type="submit" class="w-full text-left block px-3 sm:px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                     Déconnexion
                                 </button>
                             </form>
@@ -230,19 +245,19 @@
         <main class="flex-1 overflow-y-auto bg-gray-50">
             <!-- Page Header -->
             @if (isset($header))
-                <div class="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
+                <div class="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
                     {{ $header }}
                 </div>
             @endif
 
             <!-- Main Content -->
-            <div class="p-4 md:p-6">
+            <div class="p-3 sm:p-4 md:p-6">
                 {{ $slot }}
             </div>
 
             <!-- Footer -->
-            <footer class="bg-white border-t border-gray-200 px-4 md:px-6 py-4 mt-auto">
-                <p class="text-sm text-gray-500 text-center">© 2025 Inventaire Pro</p>
+            <footer class="bg-white border-t border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 mt-auto">
+                <p class="text-xs sm:text-sm text-gray-500 text-center">© 2025 Inventaire Pro</p>
             </footer>
         </main>
     </div>
