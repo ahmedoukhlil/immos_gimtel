@@ -608,6 +608,29 @@
         body.select2-dropdown-open {
             overflow-y: auto !important;
         }
+        /* Forcer l'affichage de la barre de recherche dans Select2 */
+        .select2-search {
+            display: block !important;
+        }
+        .select2-search--dropdown {
+            display: block !important;
+            padding: 4px !important;
+        }
+        .select2-search__field {
+            display: block !important;
+            width: 100% !important;
+            padding: 6px 12px !important;
+        }
+        /* S'assurer que la barre de recherche est visible même avec peu d'éléments */
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        /* Cacher le message "Trop de résultats" si la recherche est toujours active */
+        .select2-results__message {
+            display: none !important;
+        }
     </style>
     @endpush
 
@@ -666,7 +689,8 @@
                             $select.select2('destroy');
                         }
                         
-                        $select.select2({
+                        // Configuration Select2 avec recherche toujours activée
+                        var select2Config = {
                             theme: 'default',
                             width: '100%',
                             placeholder: function() {
@@ -680,6 +704,7 @@
                                     return "Recherche en cours...";
                                 }
                             },
+                            // TOUJOURS activer la recherche, même avec 0 éléments
                             minimumResultsForSearch: 0,
                             allowClear: true,
                             dropdownAutoWidth: false,
@@ -687,15 +712,23 @@
                             dropdownParent: $(document.body),
                             dropdownCssClass: 'select2-dropdown-scrollable',
                             selectOnClose: false,
+                            // Améliorer la recherche avec matcher personnalisé
                             matcher: function(params, data) {
+                                // Si la recherche est vide, afficher tous les résultats
                                 if ($.trim(params.term) === '') {
                                     return data;
                                 }
+                                
+                                // Recherche insensible à la casse
                                 var term = params.term.toLowerCase();
                                 var text = data.text.toLowerCase();
+                                
+                                // Rechercher dans le texte complet
                                 if (text.indexOf(term) > -1) {
                                     return data;
                                 }
+                                
+                                // Si c'est un optgroup, vérifier les enfants
                                 if (data.children) {
                                     var match = false;
                                     $.each(data.children, function(idx, child) {
@@ -706,14 +739,71 @@
                                     });
                                     return match ? data : null;
                                 }
+                                
                                 return null;
                             }
-                        });
+                        };
                         
-                        // Gérer l'ouverture - permettre le scroll
+                        $select.select2(select2Config);
+                        
+                        // Forcer l'affichage de la barre de recherche après initialisation
+                        var select2Instance = $select.data('select2');
+                        if (select2Instance) {
+                            // Surcharger la méthode qui détermine si la recherche doit être affichée
+                            select2Instance.options.get('minimumResultsForSearch', function() {
+                                return 0; // Toujours retourner 0 pour forcer l'affichage
+                            });
+                        }
+                        
+                        // Gérer l'ouverture - permettre le scroll et forcer l'affichage de la recherche
                         $select.off('select2:open').on('select2:open', function() {
                             $('html, body').css('overflow-y', 'auto');
                             $('body').addClass('select2-dropdown-open');
+                            
+                            // Forcer l'affichage de la barre de recherche
+                            setTimeout(function() {
+                                // Méthode 1 : Via le dropdown directement
+                                var $allDropdowns = $('.select2-dropdown:visible');
+                                $allDropdowns.each(function() {
+                                    var $dropdown = $(this);
+                                    var $searchContainer = $dropdown.find('.select2-search--dropdown');
+                                    var $searchField = $dropdown.find('.select2-search__field');
+                                    
+                                    if ($searchContainer.length) {
+                                        $searchContainer.show().css({'display': 'block !important', 'visibility': 'visible'});
+                                    }
+                                    if ($searchField.length) {
+                                        $searchField.show().css({
+                                            'display': 'block !important',
+                                            'visibility': 'visible',
+                                            'opacity': '1'
+                                        });
+                                        $searchField.attr('placeholder', 'Rechercher...');
+                                        $searchField.focus();
+                                    }
+                                });
+                                
+                                // Méthode 2 : Via l'instance Select2
+                                try {
+                                    var select2Data = $select.data('select2');
+                                    if (select2Data && select2Data.$dropdown) {
+                                        var $dropdown = select2Data.$dropdown;
+                                        var $search = $dropdown.find('.select2-search__field');
+                                        var $searchContainer = $dropdown.find('.select2-search');
+                                        
+                                        if ($searchContainer.length) {
+                                            $searchContainer.show().css({'display': 'block', 'visibility': 'visible'});
+                                        }
+                                        if ($search.length) {
+                                            $search.show().css({'display': 'block', 'visibility': 'visible', 'opacity': '1'});
+                                            $search.attr('placeholder', 'Rechercher...');
+                                            $search.focus();
+                                        }
+                                    }
+                                } catch(e) {
+                                    console.log('Erreur forçage recherche:', e);
+                                }
+                            }, 100);
                         });
                         
                         // Gérer la fermeture - restaurer le scroll
@@ -757,6 +847,19 @@
                 // Initialiser au chargement
                 initSelect2();
                 
+                // Réinitialiser après les mises à jour Livewire
+                document.addEventListener('livewire:update', function() {
+                    forceScrollAndCloseDropdowns();
+                    setTimeout(function() {
+                        $('.select2-search').each(function() {
+                            if ($(this).hasClass('select2-hidden-accessible')) {
+                                $(this).select2('destroy');
+                            }
+                        });
+                        initSelect2();
+                    }, 150);
+                });
+                
                 // Réinitialiser après les erreurs de validation
                 document.addEventListener('livewire:error', function() {
                     forceScrollAndCloseDropdowns();
@@ -769,6 +872,25 @@
                         initSelect2();
                     }, 150);
                 });
+                
+                // Écouter l'événement personnalisé filters-updated
+                if (typeof Livewire !== 'undefined') {
+                    Livewire.on('filters-updated', function() {
+                        forceScrollAndCloseDropdowns();
+                        setTimeout(function() {
+                            $('.select2-search').each(function() {
+                                if ($(this).hasClass('select2-hidden-accessible')) {
+                                    $(this).select2('destroy');
+                                }
+                            });
+                            initSelect2();
+                        }, 200);
+                    });
+                    
+                    Livewire.hook('message.sent', function() {
+                        forceScrollAndCloseDropdowns();
+                    });
+                }
             });
         })();
     </script>
