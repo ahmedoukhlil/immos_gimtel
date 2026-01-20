@@ -33,11 +33,16 @@ class DashboardInventaire extends Component
         // Vérifier autorisation (admin ou agent assigné)
         $user = Auth::user();
         
-        if (!$user->isAdmin() && !$inventaire->inventaireLocalisations()->where('user_id', $user->id)->exists()) {
+        if (!$user->isAdmin() && !$inventaire->inventaireLocalisations()->where('user_id', $user->idUser)->exists()) {
             abort(403, 'Vous n\'avez pas accès à cet inventaire.');
         }
 
-        $this->inventaire = $inventaire;
+        // Charger les relations nécessaires dès le départ
+        $this->inventaire = $inventaire->load([
+            'inventaireLocalisations.localisation',
+            'inventaireLocalisations.agent',
+            'inventaireScans'
+        ]);
     }
 
     /**
@@ -45,6 +50,12 @@ class DashboardInventaire extends Component
      */
     public function getStatistiquesProperty(): array
     {
+        // Recharger les relations pour avoir les données à jour
+        $this->inventaire->load([
+            'inventaireLocalisations',
+            'inventaireScans'
+        ]);
+        
         $inventaireLocalisations = $this->inventaire->inventaireLocalisations;
         $scans = $this->inventaire->inventaireScans;
 
@@ -106,6 +117,9 @@ class DashboardInventaire extends Component
      */
     public function getInventaireLocalisationsProperty()
     {
+        // Recharger les relations pour avoir les données à jour
+        $this->inventaire->load(['inventaireLocalisations.localisation', 'inventaireLocalisations.agent']);
+        
         $query = $this->inventaire->inventaireLocalisations()
             ->with(['localisation', 'agent']);
 
@@ -159,6 +173,9 @@ class DashboardInventaire extends Component
      */
     public function getDerniersScansProperty()
     {
+        // Recharger les scans pour avoir les données à jour
+        $this->inventaire->load(['inventaireScans.bien', 'inventaireScans.localisationReelle', 'inventaireScans.agent']);
+        
         return $this->inventaire->inventaireScans()
             ->with(['bien', 'localisationReelle', 'agent'])
             ->orderBy('date_scan', 'desc')
@@ -284,7 +301,14 @@ class DashboardInventaire extends Component
      */
     public function refreshStatistiques(): void
     {
+        // Recharger l'inventaire avec toutes ses relations
         $this->inventaire->refresh();
+        $this->inventaire->load([
+            'inventaireLocalisations.localisation',
+            'inventaireLocalisations.agent',
+            'inventaireScans'
+        ]);
+        
         // Émettre un événement pour l'indicateur visuel
         $this->dispatch('statistiques-updated');
     }

@@ -21,7 +21,7 @@
     @endphp
 
     {{-- Indicateur de mise à jour discret et élégant --}}
-    @if($inventaire->statut === 'en_cours')
+    @if(in_array($inventaire->statut, ['en_preparation', 'en_cours']))
         <div 
             x-data="{ 
                 updating: false,
@@ -64,8 +64,8 @@
             </div>
         </div>
         
-        {{-- Polling léger optimisé (15 secondes) uniquement pour les statistiques --}}
-        <div wire:poll.15s="refreshStatistiques" wire:key="stats-poll" wire:loading.class="opacity-50" class="transition-opacity duration-300"></div>
+        {{-- Polling optimisé (10 secondes) pour les statistiques en temps réel --}}
+        <div wire:poll.10s="refreshStatistiques" wire:key="stats-poll-{{ $inventaire->id }}" wire:loading.class="opacity-50" class="transition-opacity duration-300"></div>
     @endif
 
     {{-- Header avec breadcrumb et actions --}}
