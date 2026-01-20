@@ -563,8 +563,19 @@ class ScanController extends Controller
         });
 
         // Mettre à jour le nombre de biens scannés dans InventaireLocalisation
+        // Compter les scans uniques pour cette localisation
         $nombreBiensScannes = InventaireScan::where('inventaire_localisation_id', $inventaireLocalisation->id)
-            ->count();
+            ->distinct('bien_id')
+            ->count('bien_id');
+        
+        // Si le count distinct ne fonctionne pas, utiliser une autre méthode
+        if ($nombreBiensScannes == 0) {
+            $nombreBiensScannes = InventaireScan::where('inventaire_localisation_id', $inventaireLocalisation->id)
+                ->select('bien_id')
+                ->distinct()
+                ->get()
+                ->count();
+        }
         
         $inventaireLocalisation->update([
             'nombre_biens_scannes' => $nombreBiensScannes,

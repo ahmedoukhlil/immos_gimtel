@@ -51,8 +51,9 @@ class DashboardInventaire extends Component
     public function getStatistiquesProperty(): array
     {
         // Recharger les relations pour avoir les données à jour
+        $this->inventaire->refresh();
         $this->inventaire->load([
-            'inventaireLocalisations',
+            'inventaireLocalisations.localisation',
             'inventaireScans'
         ]);
         
@@ -62,16 +63,58 @@ class DashboardInventaire extends Component
         $totalLocalisations = $inventaireLocalisations->count();
         $localisationsTerminees = $inventaireLocalisations->where('statut', 'termine')->count();
         $localisationsEnCours = $inventaireLocalisations->where('statut', 'en_cours')->count();
+        $localisationsEnAttente = $inventaireLocalisations->where('statut', 'en_attente')->count();
 
+        // Calculer le total de biens attendus (somme de tous les biens attendus dans toutes les localisations)
         $totalBiensAttendus = $inventaireLocalisations->sum('nombre_biens_attendus');
-        $totalBiensScannes = $scans->count();
+        
+        // Si le total est 0, recalculer depuis les emplacements
+        if ($totalBiensAttendus == 0) {
+            foreach ($inventaireLocalisations as $invLoc) {
+                if ($invLoc->localisation) {
+                    $nombreBiensAttendus = $invLoc->localisation->emplacements()
+                        ->withCount('immobilisations')
+                        ->get()
+                        ->sum('immobilisations_count');
+                    
+                    if ($invLoc->nombre_biens_attendus == 0) {
+                        $invLoc->update(['nombre_biens_attendus' => $nombreBiensAttendus]);
+                    }
+                }
+            }
+            // Recharger après mise à jour
+            $this->inventaire->refresh();
+            $inventaireLocalisations = $this->inventaire->inventaireLocalisations;
+            $totalBiensAttendus = $inventaireLocalisations->sum('nombre_biens_attendus');
+        }
+
+        // Total de biens scannés : utiliser le nombre depuis les localisations (plus fiable)
+        // car il est mis à jour lors de la finalisation du scan
+        $totalBiensScannesFromLoc = $inventaireLocalisations->sum('nombre_biens_scannes');
+        
+        // Compter aussi les scans uniques dans la table inventaire_scans
+        $totalBiensScannesFromScans = $scans->unique('bien_id')->count();
+        
+        // Utiliser le maximum entre les deux pour être sûr d'avoir le bon nombre
+        $totalBiensScannes = max($totalBiensScannesFromLoc, $totalBiensScannesFromScans);
+        
+        // Si toujours 0, utiliser le count simple des scans
+        if ($totalBiensScannes == 0) {
+            $totalBiensScannes = $scans->count();
+        }
 
         $biensPresents = $scans->where('statut_scan', 'present')->count();
         $biensDeplaces = $scans->where('statut_scan', 'deplace')->count();
         $biensAbsents = $scans->where('statut_scan', 'absent')->count();
         $biensDeteriores = $scans->where('statut_scan', 'deteriore')->count();
 
-        $progressionGlobale = $totalLocalisations > 0 
+        // Progression globale : basée sur les biens scannés vs attendus
+        $progressionGlobale = $totalBiensAttendus > 0 
+            ? round(($totalBiensScannes / $totalBiensAttendus) * 100, 1) 
+            : 0;
+        
+        // Progression par localisations (pour information)
+        $progressionLocalisations = $totalLocalisations > 0 
             ? round(($localisationsTerminees / $totalLocalisations) * 100, 1) 
             : 0;
 
@@ -97,7 +140,7 @@ class DashboardInventaire extends Component
             'total_localisations' => $totalLocalisations,
             'localisations_terminees' => $localisationsTerminees,
             'localisations_en_cours' => $localisationsEnCours,
-            'localisations_en_attente' => $inventaireLocalisations->where('statut', 'en_attente')->count(),
+            'localisations_en_attente' => $localisationsEnAttente,
             'total_biens_attendus' => $totalBiensAttendus,
             'total_biens_scannes' => $totalBiensScannes,
             'biens_presents' => $biensPresents,
@@ -105,6 +148,7 @@ class DashboardInventaire extends Component
             'biens_absents' => $biensAbsents,
             'biens_deteriores' => $biensDeteriores,
             'progression_globale' => $progressionGlobale,
+            'progression_localisations' => $progressionLocalisations,
             'taux_conformite' => $tauxConformite,
             'duree_jours' => $dureeJours,
             'scans_aujourdhui' => $scansAujourdhui,
