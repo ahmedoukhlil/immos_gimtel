@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\Gesimmo;
 
 class InventaireScan extends Model
 {
@@ -50,10 +51,20 @@ class InventaireScan extends Model
 
     /**
      * Relation avec le bien
+     * Note: Dans le nouveau workflow, bien_id peut contenir NumOrdre (Gesimmo)
+     * ou l'ID d'un Bien selon le contexte
      */
     public function bien(): BelongsTo
     {
         return $this->belongsTo(Bien::class);
+    }
+
+    /**
+     * Relation avec Gesimmo (pour le nouveau workflow)
+     */
+    public function gesimmo(): BelongsTo
+    {
+        return $this->belongsTo(Gesimmo::class, 'bien_id', 'NumOrdre');
     }
 
     /**

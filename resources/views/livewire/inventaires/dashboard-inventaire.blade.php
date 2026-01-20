@@ -471,10 +471,10 @@
                         @endphp
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-3 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">{{ $invLoc->localisation->code }}</div>
+                                <div class="text-sm font-medium text-gray-900">{{ $invLoc->localisation->CodeLocalisation ?? $invLoc->localisation->Localisation ?? 'N/A' }}</div>
                             </td>
                             <td class="px-4 py-3">
-                                <div class="text-sm text-gray-900">{{ $invLoc->localisation->designation }}</div>
+                                <div class="text-sm text-gray-900">{{ $invLoc->localisation->Localisation ?? 'N/A' }}</div>
                             </td>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 @if(isset($statutsLoc[$invLoc->statut]))
@@ -562,19 +562,19 @@
                 <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div class="flex-shrink-0">
                         <div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center">
-                            <span class="text-xs font-medium text-indigo-600">{{ substr($scan->agent->name ?? 'N', 0, 1) }}</span>
+                            <span class="text-xs font-medium text-indigo-600">{{ substr($scan->agent->users ?? 'N', 0, 1) }}</span>
                         </div>
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between">
-                            <p class="text-sm font-medium text-gray-900">{{ $scan->agent->name ?? 'N/A' }}</p>
+                            <p class="text-sm font-medium text-gray-900">{{ $scan->agent->users ?? 'N/A' }}</p>
                             <p class="text-xs text-gray-500">{{ $scan->date_scan->diffForHumans() }}</p>
                         </div>
                         <p class="text-sm text-gray-600 mt-1">
-                            a scanné <span class="font-medium">{{ $scan->bien->code_inventaire ?? 'N/A' }}</span>
+                            a scanné <span class="font-medium">{{ $scan->code_inventaire ?? ($scan->gesimmo ? 'GS' . $scan->gesimmo->NumOrdre : 'N/A') }}</span>
                         </p>
                         <div class="flex items-center gap-2 mt-1">
-                            <span class="text-xs text-gray-500">{{ $scan->localisationReelle->code ?? 'N/A' }}</span>
+                            <span class="text-xs text-gray-500">{{ $scan->localisationReelle->CodeLocalisation ?? ($scan->localisationReelle->Localisation ?? 'N/A') }}</span>
                             @if(isset($statutsScan[$scan->statut_scan]))
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $statutsScan[$scan->statut_scan]['color'] }}">
                                     {{ $statutsScan[$scan->statut_scan]['label'] }}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Inventaire;
 use App\Models\InventaireScan;
+use App\Models\InventaireLocalisation;
 use App\Models\Bien;
 use App\Models\Emplacement;
 use App\Models\Gesimmo;
@@ -444,6 +445,7 @@ class ScanController extends Controller
     /**
      * NOUVEAU WORKFLOW: Terminer le scan d'un emplacement
      * Calcule les écarts entre biens attendus et biens scannés
+     * ET sauvegarde les scans dans la base de données
      * 
      * @param Request $request
      * @param int $idEmplacement
@@ -456,6 +458,8 @@ class ScanController extends Controller
             'biens_scannes.*' => 'integer|exists:gesimmo,NumOrdre',
         ]);
 
+        $user = $request->user();
+
         // Vérifier que l'emplacement existe
         $emplacement = Emplacement::with(['localisation', 'affectation'])
             ->find($idEmplacement);
@@ -466,7 +470,60 @@ class ScanController extends Controller
             ], 404);
         }
 
-        // Récupérer tous les biens attendus
+        // Trouver l'inventaire en cours
+        $inventaire = Inventaire::whereIn('statut', ['en_preparation', 'en_cours'])->first();
+        
+        if (!$inventaire) {
+            return response()->json([
+                'message' => 'Aucun inventaire en cours'
+            ], 404);
+        }
+
+        // Récupérer la localisation de l'emplacement
+        $localisation = $emplacement->localisation;
+        
+        if (!$localisation) {
+            return response()->json([
+                'message' => 'Localisation non trouvée pour cet emplacement'
+            ], 404);
+        }
+
+        // Trouver ou créer l'InventaireLocalisation
+        $inventaireLocalisation = InventaireLocalisation::firstOrCreate(
+            [
+                'inventaire_id' => $inventaire->id,
+                'localisation_id' => $localisation->idLocalisation,
+            ],
+            [
+                'statut' => 'en_attente',
+                'nombre_biens_attendus' => 0,
+                'nombre_biens_scannes' => 0,
+                'user_id' => $user->idUser,
+            ]
+        );
+
+        // Si c'est la première fois, calculer le nombre de biens attendus
+        if ($inventaireLocalisation->nombre_biens_attendus == 0) {
+            $nombreBiensAttendus = $localisation->emplacements()
+                ->withCount('immobilisations')
+                ->get()
+                ->sum('immobilisations_count');
+            
+            $inventaireLocalisation->update([
+                'nombre_biens_attendus' => $nombreBiensAttendus
+            ]);
+        }
+
+        // Démarrer le scan si pas encore démarré
+        if ($inventaireLocalisation->statut === 'en_attente') {
+            $inventaireLocalisation->update([
+                'statut' => 'en_cours',
+                'date_debut_scan' => now(),
+                'user_id' => $user->idUser,
+            ]);
+        }
+
+        // Récupérer tous les biens attendus de cet emplacement
         $biensAttendus = Gesimmo::where('idEmplacement', $idEmplacement)
             ->with(['designation', 'categorie'])
             ->get();
@@ -477,6 +534,43 @@ class ScanController extends Controller
         // Calculer les écarts
         $biensManquants = array_diff($biensAttendusList, $biensScannesList);
         $biensEnTrop = array_diff($biensScannesList, $biensAttendusList);
+
+        // Sauvegarder les scans dans la base de données
+        DB::transaction(function () use ($inventaire, $inventaireLocalisation, $biensScannesList, $emplacement, $user) {
+            foreach ($biensScannesList as $numOrdre) {
+                // Vérifier si le scan existe déjà
+                $scanExistant = InventaireScan::where('inventaire_id', $inventaire->id)
+                    ->where('bien_id', $numOrdre)
+                    ->first();
+
+                if (!$scanExistant) {
+                    // Trouver le bien (Gesimmo) pour obtenir son id dans la table biens si nécessaire
+                    $bien = Gesimmo::find($numOrdre);
+                    
+                    // Créer le scan
+                    InventaireScan::create([
+                        'inventaire_id' => $inventaire->id,
+                        'inventaire_localisation_id' => $inventaireLocalisation->id,
+                        'bien_id' => $numOrdre, // Utiliser NumOrdre comme bien_id (à adapter selon votre structure)
+                        'date_scan' => now(),
+                        'statut_scan' => 'present', // Par défaut, le bien est présent
+                        'localisation_reelle_id' => $emplacement->idLocalisation,
+                        'etat_constate' => 'bon', // Par défaut
+                        'user_id' => $user->idUser,
+                    ]);
+                }
+            }
+        });
+
+        // Mettre à jour le nombre de biens scannés dans InventaireLocalisation
+        $nombreBiensScannes = InventaireScan::where('inventaire_localisation_id', $inventaireLocalisation->id)
+            ->count();
+        
+        $inventaireLocalisation->update([
+            'nombre_biens_scannes' => $nombreBiensScannes,
+            'statut' => 'termine',
+            'date_fin_scan' => now(),
+        ]);
 
         // Détails des biens manquants
         $detailsManquants = Gesimmo::whereIn('NumOrdre', $biensManquants)

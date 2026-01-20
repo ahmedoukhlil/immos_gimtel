@@ -136,8 +136,8 @@ class DashboardInventaire extends Component
         // Recherche
         if (!empty($this->searchLoc)) {
             $query->whereHas('localisation', function ($q) {
-                $q->where('code', 'like', '%' . $this->searchLoc . '%')
-                    ->orWhere('designation', 'like', '%' . $this->searchLoc . '%');
+                $q->where('CodeLocalisation', 'like', '%' . $this->searchLoc . '%')
+                    ->orWhere('Localisation', 'like', '%' . $this->searchLoc . '%');
             });
         }
 
@@ -147,7 +147,7 @@ class DashboardInventaire extends Component
         // Tri manuel si nécessaire (pour le code de localisation)
         if ($this->sortField === 'code') {
             $results = $results->sortBy(function ($invLoc) {
-                return $invLoc->localisation->code ?? '';
+                return $invLoc->localisation->CodeLocalisation ?? $invLoc->localisation->Localisation ?? '';
             }, SORT_REGULAR, $this->sortDirection === 'desc');
         }
 
@@ -164,7 +164,7 @@ class DashboardInventaire extends Component
             ->with('agent')
             ->get()
             ->pluck('agent')
-            ->unique('id')
+            ->unique('idUser')
             ->values();
     }
 
@@ -174,13 +174,26 @@ class DashboardInventaire extends Component
     public function getDerniersScansProperty()
     {
         // Recharger les scans pour avoir les données à jour
-        $this->inventaire->load(['inventaireScans.bien', 'inventaireScans.localisationReelle', 'inventaireScans.agent']);
+        $this->inventaire->load([
+            'inventaireScans.gesimmo.designation',
+            'inventaireScans.gesimmo.categorie',
+            'inventaireScans.localisationReelle',
+            'inventaireScans.agent'
+        ]);
         
         return $this->inventaire->inventaireScans()
-            ->with(['bien', 'localisationReelle', 'agent'])
+            ->with(['gesimmo.designation', 'gesimmo.categorie', 'localisationReelle', 'agent'])
             ->orderBy('date_scan', 'desc')
             ->limit(20)
-            ->get();
+            ->get()
+            ->map(function ($scan) {
+                // Ajouter un accesseur pour obtenir le code d'inventaire depuis Gesimmo
+                if ($scan->gesimmo) {
+                    $scan->code_inventaire = "GS{$scan->gesimmo->NumOrdre}";
+                    $scan->designation = $scan->gesimmo->designation->designation ?? 'N/A';
+                }
+                return $scan;
+            });
     }
 
     /**
@@ -204,8 +217,8 @@ class DashboardInventaire extends Component
         foreach ($nonDemarrees as $invLoc) {
             $alertes['localisations_non_demarrees'][] = [
                 'id' => $invLoc->id,
-                'code' => $invLoc->localisation->code,
-                'designation' => $invLoc->localisation->designation,
+                'code' => $invLoc->localisation->CodeLocalisation ?? $invLoc->localisation->Localisation ?? 'N/A',
+                'designation' => $invLoc->localisation->Localisation ?? 'N/A',
             ];
         }
 
@@ -232,8 +245,8 @@ class DashboardInventaire extends Component
             
             $alertes['localisations_bloquees'][] = [
                 'id' => $invLoc->id,
-                'code' => $invLoc->localisation->code,
-                'designation' => $invLoc->localisation->designation,
+                'code' => $invLoc->localisation->CodeLocalisation ?? $invLoc->localisation->Localisation ?? 'N/A',
+                'designation' => $invLoc->localisation->Localisation ?? 'N/A',
                 'jours' => $joursSansScan,
             ];
         }
@@ -266,8 +279,8 @@ class DashboardInventaire extends Component
         foreach ($nonAssignees as $invLoc) {
             $alertes['localisations_non_assignees'][] = [
                 'id' => $invLoc->id,
-                'code' => $invLoc->localisation->code,
-                'designation' => $invLoc->localisation->designation,
+                'code' => $invLoc->localisation->CodeLocalisation ?? $invLoc->localisation->Localisation ?? 'N/A',
+                'designation' => $invLoc->localisation->Localisation ?? 'N/A',
             ];
         }
 
