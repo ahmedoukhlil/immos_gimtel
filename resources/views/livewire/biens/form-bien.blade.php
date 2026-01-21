@@ -126,7 +126,7 @@
                             Localisation <span class="text-red-500">*</span>
                         </label>
                         <livewire:components.searchable-select
-                            wire:model.live="idLocalisation"
+                            wire:model.live.debounce.150ms="idLocalisation"
                             :options="$this->localisationOptions"
                             placeholder="Sélectionner une localisation"
                             search-placeholder="Rechercher une localisation..."
@@ -151,7 +151,7 @@
                         @else
                             <livewire:components.searchable-select
                                 wire:key="affectation-{{ $idLocalisation }}"
-                                wire:model.live="idAffectation"
+                                wire:model.live.debounce.150ms="idAffectation"
                                 :options="$this->affectationOptions"
                                 placeholder="Sélectionner une affectation"
                                 search-placeholder="Rechercher une affectation..."

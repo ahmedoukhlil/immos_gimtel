@@ -309,28 +309,37 @@
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     @foreach($this->biens as $bien)
                                         <tr class="hover:bg-gray-50">
-                                            <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">{{ $bien->code_inventaire }}</td>
-                                            <td class="px-3 py-2 text-sm text-gray-900">{{ Str::limit($bien->designation, 40) }}</td>
+                                            <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                GS{{ $bien->NumOrdre }}
+                                            </td>
+                                            <td class="px-3 py-2 text-sm text-gray-900">
+                                                {{ Str::limit($bien->designation->designation ?? 'N/A', 40) }}
+                                            </td>
                                             <td class="px-3 py-2 whitespace-nowrap">
-                                                @if(isset($natures[$bien->nature]))
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $natures[$bien->nature]['color'] }}">
-                                                        {{ $natures[$bien->nature]['label'] }}
-                                                    </span>
-                                                @endif
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                    {{ $bien->natureJuridique->NatJur ?? 'N/A' }}
+                                                </span>
                                             </td>
                                             <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                {{ number_format($bien->valeur_acquisition, 0, ',', ' ') }} MRU
+                                                N/A
                                             </td>
                                             <td class="px-3 py-2 whitespace-nowrap">
-                                                @if(isset($etats[$bien->etat]))
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $etats[$bien->etat]['color'] }}">
-                                                        {{ $etats[$bien->etat]['label'] }}
+                                                @php
+                                                    $etatNom = strtolower($bien->etat->Etat ?? '');
+                                                @endphp
+                                                @if(isset($etats[$etatNom]))
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $etats[$etatNom]['color'] }}">
+                                                        {{ $etats[$etatNom]['label'] }}
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                                        {{ $bien->etat->Etat ?? 'N/A' }}
                                                     </span>
                                                 @endif
                                             </td>
                                             <td class="px-3 py-2 whitespace-nowrap text-right text-sm">
                                                 <a 
-                                                    href="{{ route('biens.show', $bien) }}"
+                                                    href="{{ route('biens.show', $bien->NumOrdre) }}"
                                                     class="text-indigo-600 hover:text-indigo-900">
                                                     Voir
                                                 </a>
@@ -351,20 +360,12 @@
 
                     <div class="mt-4 flex gap-2">
                         <a 
-                            href="{{ route('biens.create', ['localisation_id' => $localisation->id]) }}"
+                            href="{{ route('biens.create') }}"
                             class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                             </svg>
                             Ajouter un bien
-                        </a>
-                        <a 
-                            href="{{ route('biens.export-excel', ['localisation_id' => $localisation->id]) }}"
-                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            Exporter liste
                         </a>
                     </div>
                 @endif
@@ -473,7 +474,7 @@
                                 @endif
                                 @if($invLoc->agent)
                                     <p class="text-xs text-gray-500 mt-1">
-                                        Agent : {{ $invLoc->agent->name }}
+                                        Agent : {{ $invLoc->agent->users ?? 'N/A' }}
                                     </p>
                                 @endif
                             </div>
@@ -562,7 +563,7 @@
                                 @foreach($this->mouvementsRecents['entres'] as $scan)
                                     <div class="border-l-4 border-green-500 pl-4 py-2">
                                         <p class="text-sm font-medium text-gray-900">
-                                            {{ $scan->bien->code_inventaire ?? 'N/A' }}
+                                            GS{{ $scan->gesimmo->NumOrdre ?? 'N/A' }}
                                         </p>
                                         <p class="text-xs text-gray-500">
                                             {{ $scan->date_scan->format('d/m/Y à H:i') }}
@@ -586,14 +587,18 @@
                                 @foreach($this->mouvementsRecents['sortis'] as $scan)
                                     <div class="border-l-4 border-red-500 pl-4 py-2">
                                         <p class="text-sm font-medium text-gray-900">
-                                            {{ $scan->bien->code_inventaire ?? 'N/A' }}
+                                            GS{{ $scan->gesimmo->NumOrdre ?? 'N/A' }}
                                         </p>
                                         <p class="text-xs text-gray-500">
                                             {{ $scan->date_scan->format('d/m/Y à H:i') }}
                                         </p>
                                         @if($scan->localisationReelle)
                                             <p class="text-xs text-gray-600 mt-1">
-                                                Vers : {{ $scan->localisationReelle->code }}
+                                                Vers : {{ $scan->localisationReelle->CodeLocalisation ?? $scan->localisationReelle->Localisation ?? 'N/A' }}
+                                            </p>
+                                        @elseif($scan->statut_scan === 'absent')
+                                            <p class="text-xs text-red-600 mt-1">
+                                                Absent
                                             </p>
                                         @endif
                                     </div>

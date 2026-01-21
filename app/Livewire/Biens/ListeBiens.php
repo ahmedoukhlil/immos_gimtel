@@ -38,6 +38,14 @@ class ListeBiens extends Component
     public $selectedBiens = [];
 
     /**
+     * Cache interne pour éviter les recalculs
+     */
+    private $cachedAffectationOptions = null;
+    private $cachedAffectationOptionsKey = null;
+    private $cachedEmplacementOptions = null;
+    private $cachedEmplacementOptionsKey = null;
+
+    /**
      * Initialisation du composant
      */
     public function mount(): void
@@ -66,19 +74,24 @@ class ListeBiens extends Component
 
     /**
      * Propriété calculée : Retourne toutes les localisations
+     * Utilise le cache pour améliorer les performances
      */
     public function getLocalisationsProperty()
     {
-        return LocalisationImmo::orderBy('Localisation')->get();
+        return cache()->remember('localisations_list', 3600, function () {
+            return LocalisationImmo::select('idLocalisation', 'Localisation', 'CodeLocalisation')
+                ->orderBy('Localisation')
+                ->get();
+        });
     }
 
     /**
      * Propriété calculée : Retourne les affectations filtrées selon la localisation sélectionnée
-     * Optimisé avec cache et requêtes efficaces
+     * Requête directe ultra-optimisée sans cache pour une réponse instantanée
      */
     public function getAffectationsProperty()
     {
-        $query = Affectation::select('idAffectation', 'Affectation', 'CodeAffectation');
+        $query = Affectation::select('idAffectation', 'Affectation', 'CodeAffectation', 'idLocalisation');
         
         // Si une localisation est sélectionnée, filtrer les affectations par idLocalisation
         if (!empty($this->filterLocalisation)) {
@@ -91,9 +104,17 @@ class ListeBiens extends Component
     /**
      * Options pour SearchableSelect : Affectations
      * Filtrées selon la localisation sélectionnée
+     * Utilise un cache interne pour éviter les recalculs
      */
     public function getAffectationOptionsProperty()
     {
+        $cacheKey = 'affectation_options_' . ($this->filterLocalisation ?? 'all');
+        
+        // Utiliser le cache interne si la clé n'a pas changé
+        if ($this->cachedAffectationOptions !== null && $this->cachedAffectationOptionsKey === $cacheKey) {
+            return $this->cachedAffectationOptions;
+        }
+
         $options = [[
             'value' => '',
             'text' => 'Toutes les affectations',
@@ -108,12 +129,18 @@ class ListeBiens extends Component
             })
             ->toArray();
 
-        return array_merge($options, $affectations);
+        $result = array_merge($options, $affectations);
+        
+        // Mettre en cache
+        $this->cachedAffectationOptions = $result;
+        $this->cachedAffectationOptionsKey = $cacheKey;
+        
+        return $result;
     }
 
     /**
      * Propriété calculée : Retourne les emplacements filtrés selon la localisation et/ou l'affectation
-     * Format similaire au formulaire de création
+     * Requête directe ultra-optimisée sans cache pour une réponse instantanée
      */
     public function getEmplacementsProperty()
     {
@@ -124,10 +151,7 @@ class ListeBiens extends Component
             'CodeEmplacement',
             'idLocalisation',
             'idAffectation'
-        )->with([
-            'localisation:idLocalisation,Localisation,CodeLocalisation',
-            'affectation:idAffectation,Affectation,CodeAffectation'
-        ]);
+        );
         
         // Filtrer par localisation si sélectionnée
         if (!empty($this->filterLocalisation)) {
@@ -139,21 +163,56 @@ class ListeBiens extends Component
             $query->where('idAffectation', $this->filterAffectation);
         }
         
-        return $query->orderBy('Emplacement')
-            ->get()
-            ->map(function ($emplacement) {
-                // Ajouter un attribut calculé pour l'affichage
+        $emplacements = $query->orderBy('Emplacement')->get();
+        
+        // Charger les relations en une seule requête si nécessaire (seulement si on a des résultats)
+        if ($emplacements->isNotEmpty()) {
+            $localisationIds = $emplacements->pluck('idLocalisation')->unique()->filter();
+            $affectationIds = $emplacements->pluck('idAffectation')->unique()->filter();
+            
+            $localisations = collect();
+            $affectations = collect();
+            
+            if ($localisationIds->isNotEmpty()) {
+                $localisations = LocalisationImmo::select('idLocalisation', 'Localisation', 'CodeLocalisation')
+                    ->whereIn('idLocalisation', $localisationIds)
+                    ->get()
+                    ->keyBy('idLocalisation');
+            }
+            
+            if ($affectationIds->isNotEmpty()) {
+                $affectations = Affectation::select('idAffectation', 'Affectation', 'CodeAffectation')
+                    ->whereIn('idAffectation', $affectationIds)
+                    ->get()
+                    ->keyBy('idAffectation');
+            }
+            
+            // Ajouter les relations et le nom d'affichage
+            return $emplacements->map(function ($emplacement) use ($localisations, $affectations) {
+                $emplacement->localisation = $localisations->get($emplacement->idLocalisation);
+                $emplacement->affectation = $affectations->get($emplacement->idAffectation);
                 $emplacement->display_name = $this->getEmplacementDisplayName($emplacement);
                 return $emplacement;
             });
+        }
+        
+        return $emplacements;
     }
 
     /**
      * Options pour SearchableSelect : Emplacements
      * Filtrés selon la localisation et l'affectation sélectionnées
+     * Utilise un cache interne pour éviter les recalculs
      */
     public function getEmplacementOptionsProperty()
     {
+        $cacheKey = 'emplacement_options_' . ($this->filterLocalisation ?? 'all') . '_' . ($this->filterAffectation ?? 'all');
+        
+        // Utiliser le cache interne si la clé n'a pas changé
+        if ($this->cachedEmplacementOptions !== null && $this->cachedEmplacementOptionsKey === $cacheKey) {
+            return $this->cachedEmplacementOptions;
+        }
+
         $options = [[
             'value' => '',
             'text' => 'Tous les emplacements',
@@ -168,7 +227,13 @@ class ListeBiens extends Component
             })
             ->toArray();
 
-        return array_merge($options, $emplacements);
+        $result = array_merge($options, $emplacements);
+        
+        // Mettre en cache
+        $this->cachedEmplacementOptions = $result;
+        $this->cachedEmplacementOptionsKey = $cacheKey;
+        
+        return $result;
     }
     
     /**
@@ -281,6 +346,13 @@ class ListeBiens extends Component
         // Réinitialiser l'affectation et l'emplacement si la localisation change
         $this->filterAffectation = '';
         $this->filterEmplacement = '';
+        
+        // Réinitialiser le cache interne
+        $this->cachedAffectationOptions = null;
+        $this->cachedAffectationOptionsKey = null;
+        $this->cachedEmplacementOptions = null;
+        $this->cachedEmplacementOptionsKey = null;
+        
         $this->resetPage();
     }
 
@@ -291,6 +363,11 @@ class ListeBiens extends Component
     {
         // Réinitialiser l'emplacement si l'affectation change
         $this->filterEmplacement = '';
+        
+        // Réinitialiser le cache interne
+        $this->cachedEmplacementOptions = null;
+        $this->cachedEmplacementOptionsKey = null;
+        
         $this->resetPage();
     }
 

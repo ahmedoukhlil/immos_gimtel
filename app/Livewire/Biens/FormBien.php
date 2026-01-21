@@ -210,10 +210,12 @@ class FormBien extends Component
     /**
      * Options pour SearchableSelect : Affectations
      * Filtrées selon la localisation sélectionnée
+     * Optimisé pour des performances instantanées
      */
     public function getAffectationOptionsProperty()
     {
-        $query = Affectation::orderBy('Affectation');
+        $query = Affectation::select('idAffectation', 'Affectation', 'CodeAffectation', 'idLocalisation')
+            ->orderBy('Affectation');
         
         // Filtrer par localisation si une localisation est sélectionnée
         if (!empty($this->idLocalisation)) {
@@ -250,11 +252,17 @@ class FormBien extends Component
     /**
      * Options pour SearchableSelect : Emplacements
      * Filtrés selon la localisation et l'affectation sélectionnées
+     * Optimisé pour des performances instantanées
      */
     public function getEmplacementOptionsProperty()
     {
-        $query = Emplacement::with(['localisation', 'affectation'])
-            ->orderBy('Emplacement');
+        $query = Emplacement::select(
+            'idEmplacement',
+            'Emplacement',
+            'CodeEmplacement',
+            'idLocalisation',
+            'idAffectation'
+        )->orderBy('Emplacement');
         
         // Filtrer par localisation si sélectionnée
         if (!empty($this->idLocalisation)) {
@@ -266,8 +274,38 @@ class FormBien extends Component
             $query->where('idAffectation', $this->idAffectation);
         }
         
-        return $query
-            ->get()
+        $emplacements = $query->get();
+        
+        // Charger les relations en une seule requête si nécessaire
+        if ($emplacements->isNotEmpty()) {
+            $localisationIds = $emplacements->pluck('idLocalisation')->unique()->filter();
+            $affectationIds = $emplacements->pluck('idAffectation')->unique()->filter();
+            
+            $localisations = collect();
+            $affectations = collect();
+            
+            if ($localisationIds->isNotEmpty()) {
+                $localisations = LocalisationImmo::select('idLocalisation', 'Localisation', 'CodeLocalisation')
+                    ->whereIn('idLocalisation', $localisationIds)
+                    ->get()
+                    ->keyBy('idLocalisation');
+            }
+            
+            if ($affectationIds->isNotEmpty()) {
+                $affectations = Affectation::select('idAffectation', 'Affectation', 'CodeAffectation')
+                    ->whereIn('idAffectation', $affectationIds)
+                    ->get()
+                    ->keyBy('idAffectation');
+            }
+            
+            // Ajouter les relations
+            $emplacements->each(function ($emplacement) use ($localisations, $affectations) {
+                $emplacement->localisation = $localisations->get($emplacement->idLocalisation);
+                $emplacement->affectation = $affectations->get($emplacement->idAffectation);
+            });
+        }
+        
+        return $emplacements
             ->map(function ($emplacement) {
                 return [
                     'value' => (string)$emplacement->idEmplacement,
