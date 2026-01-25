@@ -44,9 +44,17 @@ class SearchableSelect extends Component
      */
     public function selectOption($optionValue)
     {
+        $oldValue = $this->value;
         $this->value = $optionValue;
         $this->search = '';
+        
+        // Émettre l'événement pour notifier le parent
         $this->dispatch('option-selected', value: $optionValue);
+        
+        // Si la valeur a changé, déclencher updatedValue pour que Livewire appelle updated* dans le parent
+        if ($oldValue !== $optionValue) {
+            $this->dispatch('$refresh');
+        }
     }
 
     /**
@@ -54,9 +62,15 @@ class SearchableSelect extends Component
      */
     public function clear()
     {
+        $oldValue = $this->value;
         $this->value = '';
         $this->search = '';
         $this->dispatch('option-cleared');
+        
+        // Si la valeur a changé, déclencher updatedValue
+        if ($oldValue !== '') {
+            $this->dispatch('$refresh');
+        }
     }
 
     /**

@@ -100,7 +100,7 @@
                                 <input 
                                     type="text"
                                     wire:model.live.debounce.300ms="search"
-                                    placeholder="NumOrdre, code, désignation..."
+                                    placeholder="NumOrdre (ex: 1001), désignation, emplacement..."
                                     class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                             </div>
                         </div>
@@ -152,15 +152,23 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     Localisation
                                 </label>
-                                <livewire:components.searchable-select
-                                    wire:model.live="filterLocalisation"
-                                    :options="$this->localisations->map(fn($l) => [
-                                        'value' => (string)$l->idLocalisation,
-                                        'text' => $l->Localisation . ($l->CodeLocalisation ? ' (' . $l->CodeLocalisation . ')' : '')
-                                    ])->prepend(['value' => '', 'text' => 'Toutes les localisations'])->toArray()"
-                                    placeholder="Toutes les localisations"
-                                    :key="'filter-localisation'"
-                                />
+                                <div class="relative">
+                                    <div wire:loading wire:target="filterLocalisation" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+                                        <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </div>
+                                    <livewire:components.searchable-select
+                                        wire:model.live="filterLocalisation"
+                                        :options="$this->localisations->map(fn($l) => [
+                                            'value' => (string)$l->idLocalisation,
+                                            'text' => $l->Localisation . ($l->CodeLocalisation ? ' (' . $l->CodeLocalisation . ')' : '')
+                                        ])->prepend(['value' => '', 'text' => 'Toutes les localisations'])->toArray()"
+                                        placeholder="Toutes les localisations"
+                                        :key="'localisation-select-static'"
+                                    />
+                                </div>
                             </div>
 
                             {{-- Filtre Affectation --}}
@@ -177,17 +185,25 @@
                                         </svg>
                                     </span>
                                 </label>
-                                <livewire:components.searchable-select
-                                    wire:model.live="filterAffectation"
-                                    :options="$this->affectationOptions"
-                                    placeholder="Toutes les affectations"
-                                    search-placeholder="Rechercher une affectation..."
-                                    no-results-text="Aucune affectation trouvée"
-                                    :allow-clear="true"
-                                    :disabled="empty($filterLocalisation)"
-                                    :container-class="empty($filterLocalisation) && !empty($filterAffectation) ? 'ring-2 ring-yellow-300' : ''"
-                                    wire:key="filter-affectation-{{ $filterLocalisation }}"
-                                />
+                                <div class="relative">
+                                    <div wire:loading wire:target="filterLocalisation,filterAffectation" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+                                        <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </div>
+                                    <livewire:components.searchable-select
+                                        wire:model.live="filterAffectation"
+                                        :options="$this->affectationOptions"
+                                        placeholder="Toutes les affectations"
+                                        search-placeholder="Rechercher une affectation..."
+                                        no-results-text="Aucune affectation trouvée"
+                                        :allow-clear="true"
+                                        :disabled="empty($filterLocalisation)"
+                                        :container-class="empty($filterLocalisation) && !empty($filterAffectation) ? 'ring-2 ring-yellow-300' : ''"
+                                        :key="'affectation-select-' . ($filterLocalisation ?? 'none')"
+                                    />
+                                </div>
                                 @if(empty($filterLocalisation) && !empty($filterAffectation))
                                     <p class="mt-1 text-xs text-yellow-600">
                                         Sélectionnez une localisation pour filtrer les affectations disponibles
@@ -210,20 +226,28 @@
                                     </span>
                                 </label>
                                 <div class="flex flex-col gap-2">
-                                    <livewire:components.searchable-select
-                                        wire:model.live="filterEmplacement"
-                                        :options="$this->emplacementOptions"
-                                        placeholder="Tous les emplacements"
-                                        search-placeholder="Rechercher un emplacement..."
-                                        no-results-text="Aucun emplacement trouvé"
-                                        :allow-clear="true"
-                                        :disabled="empty($filterLocalisation) && empty($filterAffectation)"
-                                        :container-class="(empty($filterLocalisation) && empty($filterAffectation)) && !empty($filterEmplacement) ? 'ring-2 ring-yellow-300' : ''"
-                                        wire:key="filter-emplacement-{{ $filterLocalisation }}-{{ $filterAffectation }}"
-                                    />
-                                    @if((empty($filterLocalisation) && empty($filterAffectation)) && !empty($filterEmplacement))
+                                    <div class="relative">
+                                        <div wire:loading wire:target="filterAffectation,filterEmplacement" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10 rounded-lg">
+                                            <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        </div>
+                                        <livewire:components.searchable-select
+                                            wire:model.live="filterEmplacement"
+                                            :options="$this->emplacementOptions"
+                                            placeholder="Tous les emplacements"
+                                            search-placeholder="Rechercher un emplacement..."
+                                            no-results-text="Aucun emplacement trouvé"
+                                            :allow-clear="true"
+                                            :disabled="empty($filterAffectation)"
+                                            :container-class="empty($filterAffectation) && !empty($filterEmplacement) ? 'ring-2 ring-yellow-300' : ''"
+                                            :key="'emplacement-select-' . ($filterLocalisation ?? 'none') . '-' . ($filterAffectation ?? 'none')"
+                                        />
+                                    </div>
+                                    @if(empty($filterAffectation) && !empty($filterEmplacement))
                                         <p class="text-xs text-yellow-600">
-                                            Utilisez les filtres Localisation et Affectation pour affiner votre recherche
+                                            Sélectionnez une affectation pour filtrer les emplacements disponibles
                                         </p>
                                     @endif
                                 </div>

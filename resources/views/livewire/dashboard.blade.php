@@ -115,12 +115,79 @@
         <!-- Section Inventaire en cours -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-8">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-lg font-semibold text-gray-900">Inventaire {{ $inventaireEnCours->annee }} en cours</h3>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        Inventaire {{ $inventaireEnCours->annee }}
+                        @if($inventaireEnCours->statut === 'en_preparation')
+                            <span class="text-sm font-normal text-gray-500">(en préparation)</span>
+                        @elseif($inventaireEnCours->statut === 'en_cours')
+                            <span class="text-sm font-normal text-blue-600">(en cours)</span>
+                        @endif
+                    </h3>
+                    @if($inventaireEnCours->date_debut)
+                        <p class="text-sm text-gray-500 mt-1">
+                            Démarré le {{ \Carbon\Carbon::parse($inventaireEnCours->date_debut)->format('d/m/Y') }}
+                        </p>
+                    @endif
+                </div>
                 <a href="{{ route('inventaires.show', $inventaireEnCours->id) }}" 
-                   class="text-sm text-blue-600 hover:text-blue-800">
+                   class="text-sm text-blue-600 hover:text-blue-800 font-medium">
                     Voir détails complets →
                 </a>
             </div>
+
+            <!-- Résumé statistiques -->
+            @if(!empty($statistiquesInventaire))
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-200">
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-medium text-blue-600 uppercase tracking-wider">Localisations</p>
+                                <p class="text-2xl font-bold text-blue-900 mt-1">
+                                    {{ $statistiquesInventaire['localisations_terminees'] ?? 0 }}<span class="text-lg text-blue-600">/{{ $statistiquesInventaire['total_localisations'] ?? 0 }}</span>
+                                </p>
+                            </div>
+                            <div class="text-2xl">📍</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-medium text-green-600 uppercase tracking-wider">Total scans</p>
+                                <p class="text-2xl font-bold text-green-900 mt-1">
+                                    {{ number_format($statistiquesInventaire['total_scans'] ?? 0, 0, ',', ' ') }}
+                                </p>
+                            </div>
+                            <div class="text-2xl">✅</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-medium text-purple-600 uppercase tracking-wider">Progression</p>
+                                <p class="text-2xl font-bold text-purple-900 mt-1">
+                                    {{ round($statistiquesInventaire['progression'] ?? 0, 1) }}%
+                                </p>
+                            </div>
+                            <div class="text-2xl">📊</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-50 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-xs font-medium text-indigo-600 uppercase tracking-wider">Conformité</p>
+                                <p class="text-2xl font-bold text-indigo-900 mt-1">
+                                    {{ round($statistiquesInventaire['taux_conformite'] ?? 0, 1) }}%
+                                </p>
+                            </div>
+                            <div class="text-2xl">🎯</div>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             <!-- Tableau récapitulatif -->
             <div class="overflow-x-auto mb-8">
@@ -128,40 +195,81 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localisation</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Immobilisations attendues</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scannés</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Attendus</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Scannés</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progression</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent assigné</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         @forelse($localisationsInventaire as $loc)
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $loc['localisation'] }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loc['biens_attendus'] }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loc['biens_scannes'] }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-6 py-4 text-sm font-medium text-gray-900">
+                                    {{ $loc['localisation'] }}
+                                </td>
+                                <td class="px-6 py-4 text-center text-sm text-gray-900 font-semibold">
+                                    {{ number_format($loc['biens_attendus'], 0, ',', ' ') }}
+                                </td>
+                                <td class="px-6 py-4 text-center text-sm font-semibold
+                                    {{ $loc['biens_scannes'] > 0 ? 'text-blue-600' : 'text-gray-400' }}">
+                                    {{ number_format($loc['biens_scannes'], 0, ',', ' ') }}
+                                </td>
+                                <td class="px-6 py-4">
                                     <div class="flex items-center">
-                                        <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $loc['progression'] }}%"></div>
+                                        <div class="w-24 bg-gray-200 rounded-full h-2.5 mr-3">
+                                            <div class="h-2.5 rounded-full transition-all duration-300
+                                                {{ $loc['progression'] >= 100 ? 'bg-green-600' : 
+                                                   ($loc['progression'] >= 50 ? 'bg-blue-600' : 
+                                                   ($loc['progression'] > 0 ? 'bg-yellow-500' : 'bg-gray-400')) }}" 
+                                                style="width: {{ min($loc['progression'], 100) }}%"></div>
                                         </div>
-                                        <span class="text-sm text-gray-600">{{ round($loc['progression'], 1) }}%</span>
+                                        <span class="text-sm font-medium
+                                            {{ $loc['progression'] >= 100 ? 'text-green-600' : 
+                                               ($loc['progression'] > 0 ? 'text-gray-700' : 'text-gray-400') }}">
+                                            {{ round($loc['progression'], 1) }}%
+                                        </span>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                <td class="px-6 py-4 text-center">
+                                    <span class="px-3 py-1 text-xs font-semibold rounded-full 
                                         {{ $loc['statut'] === 'termine' ? 'bg-green-100 text-green-800' : 
-                                           ($loc['statut'] === 'en_cours' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800') }}">
-                                        {{ ucfirst($loc['statut']) }}
+                                           ($loc['statut'] === 'en_cours' ? 'bg-blue-100 text-blue-800' : 
+                                           ($loc['statut'] === 'en_attente' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800')) }}">
+                                        @if($loc['statut'] === 'en_attente')
+                                            ⏳ En attente
+                                        @elseif($loc['statut'] === 'en_cours')
+                                            🔄 En cours
+                                        @elseif($loc['statut'] === 'termine')
+                                            ✅ Terminé
+                                        @else
+                                            {{ ucfirst(str_replace('_', ' ', $loc['statut'])) }}
+                                        @endif
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $loc['agent'] }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">
+                                    @if($loc['agent'] === 'Non assigné')
+                                        <span class="text-gray-400 italic">{{ $loc['agent'] }}</span>
+                                    @else
+                                        <span class="flex items-center">
+                                            <svg class="w-4 h-4 mr-1.5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                                            </svg>
+                                            {{ $loc['agent'] }}
+                                        </span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
-                                    Aucune localisation scannée pour le moment
+                                <td colspan="6" class="px-6 py-12 text-center">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                        </svg>
+                                        <p class="text-sm font-medium text-gray-500">Aucune localisation assignée</p>
+                                        <p class="text-xs text-gray-400 mt-1">Assignez des localisations à inventorier pour commencer</p>
+                                    </div>
                                 </td>
                             </tr>
                         @endforelse

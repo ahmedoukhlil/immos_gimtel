@@ -135,6 +135,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Relation avec les entrées de stock créées par l'utilisateur
+     */
+    public function stockEntrees(): HasMany
+    {
+        return $this->hasMany(\App\Models\StockEntree::class, 'created_by', 'idUser');
+    }
+
+    /**
+     * Relation avec les sorties de stock créées par l'utilisateur
+     */
+    public function stockSorties(): HasMany
+    {
+        return $this->hasMany(\App\Models\StockSortie::class, 'created_by', 'idUser');
+    }
+
+    /**
      * SCOPES
      */
 
@@ -144,6 +160,14 @@ class User extends Authenticatable
     public function scopeAdmins(Builder $query): Builder
     {
         return $query->where('role', 'admin');
+    }
+
+    /**
+     * Scope pour filtrer les administrateurs stock
+     */
+    public function scopeAdminStocks(Builder $query): Builder
+    {
+        return $query->where('role', 'admin_stock');
     }
 
     /**
@@ -173,6 +197,7 @@ class User extends Authenticatable
     {
         return match($this->role) {
             'admin' => 'Administrateur',
+            'admin_stock' => 'Admin Stock',
             'agent' => 'Agent',
             default => 'Non défini',
         };
@@ -191,6 +216,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Vérifie si l'utilisateur est administrateur stock
+     */
+    public function isAdminStock(): bool
+    {
+        return $this->role === 'admin_stock';
+    }
+
+    /**
      * Vérifie si l'utilisateur est agent
      */
     public function isAgent(): bool
@@ -205,6 +238,55 @@ class User extends Authenticatable
     public function canManageInventaire(): bool
     {
         return in_array($this->role, ['admin', 'agent']);
+    }
+
+    /**
+     * Vérifie si l'utilisateur peut accéder au module Stock
+     * Admin, Admin_stock et Agent peuvent accéder au module Stock
+     */
+    public function canAccessStock(): bool
+    {
+        return in_array($this->role, ['admin', 'admin_stock', 'agent']);
+    }
+
+    /**
+     * MÉTHODES POUR LA GESTION DE STOCK
+     */
+
+    /**
+     * Vérifie si l'utilisateur peut gérer le stock (CRUD références)
+     * Admin et Admin_stock peuvent gérer les magasins, catégories, fournisseurs, demandeurs
+     */
+    public function canManageStock(): bool
+    {
+        return $this->isAdmin() || $this->isAdminStock();
+    }
+
+    /**
+     * Vérifie si l'utilisateur peut créer des entrées de stock
+     * Admin et Admin_stock peuvent créer des entrées
+     */
+    public function canCreateEntree(): bool
+    {
+        return $this->isAdmin() || $this->isAdminStock();
+    }
+
+    /**
+     * Vérifie si l'utilisateur peut créer des sorties de stock
+     * Admin, Admin_stock et Agent peuvent créer des sorties
+     */
+    public function canCreateSortie(): bool
+    {
+        return $this->isAdmin() || $this->isAdminStock() || $this->isAgent();
+    }
+
+    /**
+     * Vérifie si l'utilisateur peut voir tous les mouvements de stock
+     * Admin et Admin_stock voient tout, Agent voit seulement ses propres mouvements
+     */
+    public function canViewAllMovements(): bool
+    {
+        return $this->isAdmin() || $this->isAdminStock();
     }
 
     /**

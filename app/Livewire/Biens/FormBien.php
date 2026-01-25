@@ -11,11 +11,13 @@ use App\Models\LocalisationImmo;
 use App\Models\Affectation;
 use App\Models\NatureJuridique;
 use App\Models\SourceFinancement;
+use App\Livewire\Traits\WithCachedOptions;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class FormBien extends Component
 {
+    use WithCachedOptions;
     /**
      * Instance de l'immobilisation (null si création)
      */
@@ -193,44 +195,21 @@ class FormBien extends Component
 
     /**
      * Options pour SearchableSelect : Localisations
+     * Optimisé avec cache pour des performances ultra-rapides
      */
     public function getLocalisationOptionsProperty()
     {
-        return LocalisationImmo::orderBy('Localisation')
-            ->get()
-            ->map(function ($localisation) {
-                return [
-                    'value' => (string)$localisation->idLocalisation,
-                    'text' => ($localisation->CodeLocalisation ? $localisation->CodeLocalisation . ' - ' : '') . $localisation->Localisation,
-                ];
-            })
-            ->toArray();
+        return $this->getCachedLocalisationOptions();
     }
 
     /**
      * Options pour SearchableSelect : Affectations
      * Filtrées selon la localisation sélectionnée
-     * Optimisé pour des performances instantanées
+     * Optimisé avec cache pour des performances ultra-rapides
      */
     public function getAffectationOptionsProperty()
     {
-        $query = Affectation::select('idAffectation', 'Affectation', 'CodeAffectation', 'idLocalisation')
-            ->orderBy('Affectation');
-        
-        // Filtrer par localisation si une localisation est sélectionnée
-        if (!empty($this->idLocalisation)) {
-            $query->where('idLocalisation', $this->idLocalisation);
-        }
-        
-        return $query
-            ->get()
-            ->map(function ($affectation) {
-                return [
-                    'value' => (string)$affectation->idAffectation,
-                    'text' => ($affectation->CodeAffectation ? $affectation->CodeAffectation . ' - ' : '') . $affectation->Affectation,
-                ];
-            })
-            ->toArray();
+        return $this->getCachedAffectationOptions($this->idLocalisation);
     }
 
     /**

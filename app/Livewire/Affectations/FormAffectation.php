@@ -4,6 +4,7 @@ namespace App\Livewire\Affectations;
 
 use App\Models\Affectation;
 use App\Models\LocalisationImmo;
+use App\Livewire\Traits\WithCachedOptions;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
@@ -13,6 +14,8 @@ use Livewire\Component;
 
 class FormAffectation extends Component
 {
+    use WithCachedOptions;
+    
     /**
      * Instance de l'affectation (null si création)
      */
@@ -89,18 +92,11 @@ class FormAffectation extends Component
 
     /**
      * Propriété calculée : Options pour SearchableSelect (localisations)
+     * Optimisé avec cache pour des performances ultra-rapides
      */
     public function getLocalisationOptionsProperty()
     {
-        return LocalisationImmo::orderBy('Localisation')
-            ->get()
-            ->map(function ($localisation) {
-                return [
-                    'value' => (string)$localisation->idLocalisation,
-                    'text' => ($localisation->CodeLocalisation ? $localisation->CodeLocalisation . ' - ' : '') . $localisation->Localisation,
-                ];
-            })
-            ->toArray();
+        return $this->getCachedLocalisationOptions();
     }
 
 

@@ -148,8 +148,8 @@ class Dashboard extends Component
         // Localisations de l'inventaire
         $this->localisationsInventaire = InventaireLocalisation::where('inventaire_id', $this->inventaireEnCours->id)
             ->with(['localisation', 'agent'])
-            ->orderBy('date_debut_scan', 'desc')
-            ->limit(5)
+            ->orderBy('statut', 'asc')  // en_cours d'abord, puis en_attente, puis termine
+            ->orderBy('nombre_biens_attendus', 'desc')  // Puis par nombre de biens (plus important d'abord)
             ->get()
             ->map(function ($item) {
                 // Gérer les différents formats de localisation
@@ -158,19 +158,33 @@ class Dashboard extends Component
                     if (method_exists($item->localisation, 'getFullNameAttribute')) {
                         $localisationName = $item->localisation->full_name;
                     } elseif (isset($item->localisation->Localisation)) {
-                        $localisationName = $item->localisation->Localisation;
+                        $codeLocalisation = $item->localisation->CodeLocalisation ?? '';
+                        $localisationName = ($codeLocalisation ? $codeLocalisation . ' - ' : '') . $item->localisation->Localisation;
                     } elseif (isset($item->localisation->designation)) {
                         $localisationName = $item->localisation->designation;
                     }
                 }
                 
+                // Gérer le nom de l'agent
+                $agentName = 'Non assigné';
+                if ($item->agent) {
+                    if (isset($item->agent->name)) {
+                        $agentName = $item->agent->name;
+                    } elseif (isset($item->agent->users)) {
+                        $agentName = $item->agent->users;
+                    } elseif (isset($item->agent->email)) {
+                        $agentName = $item->agent->email;
+                    }
+                }
+                
                 return [
+                    'id' => $item->id,
                     'localisation' => $localisationName,
                     'biens_attendus' => $item->nombre_biens_attendus ?? 0,
                     'biens_scannes' => $item->nombre_biens_scannes ?? 0,
                     'progression' => $item->progression ?? 0,
                     'statut' => $item->statut ?? 'en_attente',
-                    'agent' => $item->agent ? ($item->agent->users ?? 'Non assigné') : 'Non assigné',
+                    'agent' => $agentName,
                 ];
             })
             ->toArray();
