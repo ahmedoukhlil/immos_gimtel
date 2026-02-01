@@ -107,6 +107,7 @@ class DashboardInventaire extends Component
         $biensDeplaces = $scans->where('statut_scan', 'deplace')->count();
         $biensAbsents = $scans->where('statut_scan', 'absent')->count();
         $biensDeteriores = $scans->where('statut_scan', 'deteriore')->count();
+        $biensDefectueux = $scans->where('etat_constate', 'mauvais')->count();
 
         // Progression globale : basée sur les biens scannés vs attendus
         $progressionGlobale = $totalBiensAttendus > 0 
@@ -147,6 +148,7 @@ class DashboardInventaire extends Component
             'biens_deplaces' => $biensDeplaces,
             'biens_absents' => $biensAbsents,
             'biens_deteriores' => $biensDeteriores,
+            'biens_defectueux' => $biensDefectueux,
             'progression_globale' => $progressionGlobale,
             'progression_localisations' => $progressionLocalisations,
             'taux_conformite' => $tauxConformite,
@@ -217,25 +219,22 @@ class DashboardInventaire extends Component
      */
     public function getDerniersScansProperty()
     {
-        // Recharger les scans pour avoir les données à jour
+        // Recharger les scans pour avoir les données à jour (compatible PWA: gesimmo)
         $this->inventaire->load([
             'inventaireScans.gesimmo.designation',
             'inventaireScans.gesimmo.categorie',
+            'inventaireScans.bien',
             'inventaireScans.localisationReelle',
             'inventaireScans.agent'
         ]);
         
         return $this->inventaire->inventaireScans()
-            ->with(['gesimmo.designation', 'gesimmo.categorie', 'localisationReelle', 'agent'])
+            ->with(['gesimmo.designation', 'gesimmo.categorie', 'bien', 'localisationReelle', 'agent'])
             ->orderBy('date_scan', 'desc')
             ->limit(20)
             ->get()
             ->map(function ($scan) {
-                // Ajouter un accesseur pour obtenir le code d'inventaire depuis Gesimmo
-                if ($scan->gesimmo) {
-                    $scan->code_inventaire = "GS{$scan->gesimmo->NumOrdre}";
-                    $scan->designation = $scan->gesimmo->designation->designation ?? 'N/A';
-                }
+                // InventaireScan a des accesseurs code_inventaire et designation (compatible PWA)
                 return $scan;
             });
     }
@@ -249,6 +248,7 @@ class DashboardInventaire extends Component
             'localisations_non_demarrees' => [],
             'localisations_bloquees' => [],
             'biens_absents_valeur_haute' => [],
+            'biens_defectueux' => [],
             'localisations_non_assignees' => [],
         ];
 
@@ -308,9 +308,24 @@ class DashboardInventaire extends Component
         foreach ($biensAbsents as $scan) {
             $alertes['biens_absents_valeur_haute'][] = [
                 'bien_id' => $scan->bien_id,
-                'code' => $scan->bien->code_inventaire,
-                'designation' => $scan->bien->designation,
-                'valeur' => $scan->bien->valeur_acquisition,
+                'code' => $scan->code_inventaire,
+                'designation' => $scan->designation,
+                'valeur' => $scan->bien->valeur_acquisition ?? 0,
+            ];
+        }
+
+        // Biens défectueux (etat_constate = mauvais, signalés via PWA)
+        $biensDefectueux = $this->inventaire->inventaireScans()
+            ->where('etat_constate', 'mauvais')
+            ->with(['gesimmo.designation', 'localisationReelle'])
+            ->get();
+        
+        foreach ($biensDefectueux as $scan) {
+            $alertes['biens_defectueux'][] = [
+                'bien_id' => $scan->bien_id,
+                'code' => $scan->code_inventaire,
+                'designation' => $scan->designation,
+                'localisation' => $scan->localisationReelle?->CodeLocalisation ?? $scan->localisationReelle?->Localisation ?? 'N/A',
             ];
         }
 
@@ -340,6 +355,7 @@ class DashboardInventaire extends Component
         return count($alertes['localisations_non_demarrees']) 
             + count($alertes['localisations_bloquees'])
             + count($alertes['biens_absents_valeur_haute'])
+            + count($alertes['biens_defectueux'] ?? [])
             + count($alertes['localisations_non_assignees']);
     }
 
