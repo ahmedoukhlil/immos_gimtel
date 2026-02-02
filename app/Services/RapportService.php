@@ -22,13 +22,15 @@ class RapportService
      */
     public function genererRapportPDF(Inventaire $inventaire)
     {
-        // Charger toutes les données nécessaires avec eager loading
+        // Charger toutes les données nécessaires avec eager loading (compatible PWA: gesimmo)
         $inventaire->load([
             'creator',
             'closer',
             'inventaireLocalisations.localisation',
             'inventaireLocalisations.agent',
             'inventaireScans.bien.localisation',
+            'inventaireScans.gesimmo.designation',
+            'inventaireScans.gesimmo.emplacement.localisation',
             'inventaireScans.localisationReelle',
             'inventaireScans.agent'
         ]);
@@ -102,17 +104,17 @@ class RapportService
     {
         return InventaireScan::where('inventaire_id', $inventaire->id)
             ->where('statut_scan', 'present')
-            ->with(['bien.localisation', 'localisationReelle', 'agent'])
+            ->with(['bien.localisation', 'gesimmo.designation', 'gesimmo.emplacement.localisation', 'localisationReelle', 'agent'])
             ->get()
             ->map(function ($scan) {
-                $isConforme = $scan->bien->localisation_id === $scan->localisation_reelle_id;
+                $isConforme = $scan->bien ? ($scan->bien->localisation_id === $scan->localisation_reelle_id) : true;
                 return [
-                    'code' => $scan->bien->code_inventaire,
-                    'designation' => $scan->bien->designation,
-                    'nature' => $scan->bien->nature,
-                    'localisation' => $scan->localisationReelle->code ?? null,
-                    'service' => $scan->bien->service_usager,
-                    'valeur' => $scan->bien->valeur_acquisition,
+                    'code' => $scan->code_inventaire,
+                    'designation' => $scan->designation,
+                    'nature' => $scan->bien?->nature ?? null,
+                    'localisation' => $scan->localisationReelle?->CodeLocalisation ?? $scan->localisationReelle?->Localisation ?? $scan->localisation_code,
+                    'service' => $scan->bien?->service_usager ?? null,
+                    'valeur' => $scan->bien?->valeur_acquisition ?? 0,
                     'etat' => $scan->etat_constate,
                     'date_scan' => $scan->date_scan,
                     'agent' => $scan->agent->name ?? null,
@@ -131,17 +133,19 @@ class RapportService
     {
         return InventaireScan::where('inventaire_id', $inventaire->id)
             ->where('statut_scan', 'deplace')
-            ->with(['bien.localisation', 'localisationReelle', 'agent'])
+            ->with(['bien.localisation', 'gesimmo.emplacement.localisation', 'localisationReelle', 'agent'])
             ->get()
             ->map(function ($scan) {
+                $locPrevue = $scan->bien?->localisation?->code ?? $scan->gesimmo?->emplacement?->localisation?->CodeLocalisation ?? $scan->localisation_code;
+                $locReelle = $scan->localisationReelle?->CodeLocalisation ?? $scan->localisationReelle?->Localisation ?? null;
                 return [
-                    'code' => $scan->bien->code_inventaire,
-                    'designation' => $scan->bien->designation,
-                    'nature' => $scan->bien->nature,
-                    'localisation_prevue' => $scan->bien->localisation->code ?? null,
-                    'localisation_reelle' => $scan->localisationReelle->code ?? null,
-                    'service' => $scan->bien->service_usager,
-                    'valeur' => $scan->bien->valeur_acquisition,
+                    'code' => $scan->code_inventaire,
+                    'designation' => $scan->designation,
+                    'nature' => $scan->bien?->nature ?? null,
+                    'localisation_prevue' => $locPrevue,
+                    'localisation_reelle' => $locReelle,
+                    'service' => $scan->bien?->service_usager ?? null,
+                    'valeur' => $scan->bien?->valeur_acquisition ?? 0,
                     'date_scan' => $scan->date_scan,
                     'agent' => $scan->agent->name ?? null,
                     'commentaire' => $scan->commentaire,
@@ -159,17 +163,17 @@ class RapportService
     {
         return InventaireScan::where('inventaire_id', $inventaire->id)
             ->where('statut_scan', 'absent')
-            ->with(['bien.localisation', 'agent'])
+            ->with(['bien.localisation', 'gesimmo.emplacement.localisation', 'agent'])
             ->get()
             ->map(function ($scan) {
                 return [
-                    'code' => $scan->bien->code_inventaire,
-                    'designation' => $scan->bien->designation,
-                    'nature' => $scan->bien->nature,
-                    'localisation' => $scan->bien->localisation->code ?? null,
-                    'service' => $scan->bien->service_usager,
-                    'valeur' => $scan->bien->valeur_acquisition,
-                    'date_acquisition' => $scan->bien->date_acquisition,
+                    'code' => $scan->code_inventaire,
+                    'designation' => $scan->designation,
+                    'nature' => $scan->bien?->nature ?? null,
+                    'localisation' => $scan->localisation_code ?? ($scan->bien?->localisation?->code ?? null),
+                    'service' => $scan->bien?->service_usager ?? null,
+                    'valeur' => $scan->bien?->valeur_acquisition ?? 0,
+                    'date_acquisition' => $scan->bien?->date_acquisition ?? null,
                     'date_scan' => $scan->date_scan,
                     'agent' => $scan->agent->name ?? null,
                     'commentaire' => $scan->commentaire,
