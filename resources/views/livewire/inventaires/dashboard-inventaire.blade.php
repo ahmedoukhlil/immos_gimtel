@@ -18,6 +18,12 @@
             'absent' => ['label' => 'Absent', 'color' => 'bg-red-100 text-red-800'],
             'deteriore' => ['label' => 'Détérioré', 'color' => 'bg-orange-100 text-orange-800'],
         ];
+        $etatsConstate = [
+            'neuf' => ['label' => 'Neuf', 'color' => 'bg-green-100 text-green-800'],
+            'bon' => ['label' => 'Bon état', 'color' => 'bg-blue-100 text-blue-800'],
+            'moyen' => ['label' => 'Bon état', 'color' => 'bg-blue-100 text-blue-800'],
+            'mauvais' => ['label' => 'Défectueuse', 'color' => 'bg-amber-100 text-amber-800'],
+        ];
     @endphp
 
     {{-- Actualisation automatique désactivée --}}
@@ -586,13 +592,17 @@
                         <p class="text-sm text-gray-600 mt-1">
                             a scanné <span class="font-medium">{{ $scan->code_inventaire ?? ($scan->gesimmo ? 'GS' . $scan->gesimmo->NumOrdre : 'N/A') }}</span>
                         </p>
-                        <div class="flex items-center gap-2 mt-1">
+                        <div class="flex items-center gap-2 mt-1 flex-wrap">
                             <span class="text-xs text-gray-500">{{ $scan->localisationReelle->CodeLocalisation ?? ($scan->localisationReelle->Localisation ?? 'N/A') }}</span>
                             @if(isset($statutsScan[$scan->statut_scan]))
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $statutsScan[$scan->statut_scan]['color'] }}">
                                     {{ $statutsScan[$scan->statut_scan]['label'] }}
                                 </span>
                             @endif
+                            @php $etatKey = $scan->etat_constate ?? 'bon'; $etatStyle = $etatsConstate[$etatKey] ?? $etatsConstate['bon']; @endphp
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $etatStyle['color'] }}">
+                                {{ $scan->etat_constate_label }}
+                            </span>
                         </div>
                     </div>
                 </div>

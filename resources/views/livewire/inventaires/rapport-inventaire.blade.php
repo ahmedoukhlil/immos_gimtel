@@ -10,6 +10,12 @@
             'absent' => ['label' => 'Absent', 'color' => 'bg-red-100 text-red-800'],
             'deteriore' => ['label' => 'Détérioré', 'color' => 'bg-orange-100 text-orange-800'],
         ];
+        $etatsConstate = [
+            'neuf' => ['label' => 'Neuf', 'color' => 'bg-green-100 text-green-800'],
+            'bon' => ['label' => 'Bon état', 'color' => 'bg-blue-100 text-blue-800'],
+            'moyen' => ['label' => 'Bon état', 'color' => 'bg-blue-100 text-blue-800'],
+            'mauvais' => ['label' => 'Défectueuse', 'color' => 'bg-amber-100 text-amber-800'],
+        ];
         $conformiteInterpretation = function($taux) {
             if ($taux >= 95) return ['label' => 'Excellent', 'color' => 'text-green-600', 'bg' => 'bg-green-50'];
             if ($taux >= 85) return ['label' => 'Bon', 'color' => 'text-blue-600', 'bg' => 'bg-blue-50'];
@@ -284,15 +290,20 @@
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Désignation</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">État</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Localisation</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valeur</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($this->biensPresents->take(50) as $scan)
+                                    @php $etatKey = $scan->etat_constate ?? 'bon'; $etatStyle = $etatsConstate[$etatKey] ?? $etatsConstate['bon']; @endphp
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ $scan->code_inventaire }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ Str::limit($scan->designation, 50) }}</td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium {{ $etatStyle['color'] }}">{{ $scan->etat_constate_label }}</span>
+                                        </td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $scan->localisation_code ?? ($scan->bien?->localisation?->code ?? 'N/A') }}</td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                                             {{ number_format($scan->bien?->valeur_acquisition ?? 0, 0, ',', ' ') }} MRU
@@ -376,7 +387,7 @@
                 <div x-show="sousOnglet === 'defectueux'" x-transition style="display: none;">
                     <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4">
                         <p class="text-sm text-amber-700">
-                            <strong>Immobilisations signalées défectueuses</strong> lors de l'inventaire (via PWA).
+                            <strong>Immobilisations signalées défectueuses</strong> lors de l'inventaire (via PWA). 3 états : Neuf, Bon état, Défectueuse.
                         </p>
                     </div>
                     <div class="overflow-x-auto">
@@ -385,6 +396,7 @@
                                 <tr>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Désignation</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">État</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Localisation</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo</th>
                                 </tr>
@@ -394,10 +406,27 @@
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ $scan->code_inventaire }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ Str::limit($scan->designation, 50) }}</td>
+                                        <td class="px-4 py-3 whitespace-nowrap">
+                                            <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Défectueuse</span>
+                                        </td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $scan->localisationReelle?->CodeLocalisation ?? $scan->localisationReelle?->Localisation ?? ($scan->localisation_code ?? 'N/A') }}</td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                                             @if($scan->photo_path)
-                                                <a href="{{ asset('storage/' . $scan->photo_path) }}" target="_blank" class="text-indigo-600 hover:underline">Voir photo</a>
+                                                <div x-data="{ open: false }" class="inline">
+                                                    <button @click="open = true" type="button" class="flex items-center gap-2 group">
+                                                        <img src="{{ asset('storage/' . $scan->photo_path) }}" alt="Photo {{ $scan->code_inventaire }}" class="w-12 h-12 object-cover rounded border border-gray-200 group-hover:border-indigo-400 transition cursor-pointer">
+                                                        <span class="text-indigo-600 hover:underline text-sm">Voir</span>
+                                                    </button>
+                                                    <div x-show="open" x-cloak @click.self="open = false" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" x-transition>
+                                                        <div class="relative max-w-4xl max-h-[90vh]">
+                                                            <img src="{{ asset('storage/' . $scan->photo_path) }}" alt="Photo {{ $scan->code_inventaire }}" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-xl">
+                                                            <button @click="open = false" class="absolute -top-10 right-0 text-white hover:text-gray-300 p-2">
+                                                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            </button>
+                                                            <p class="text-white text-sm mt-2 text-center">{{ $scan->code_inventaire }} - {{ Str::limit($scan->designation, 40) }}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             @else
                                                 -
                                             @endif
