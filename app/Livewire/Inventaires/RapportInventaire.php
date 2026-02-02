@@ -5,6 +5,7 @@ namespace App\Livewire\Inventaires;
 use App\Models\Inventaire;
 use App\Models\InventaireScan;
 use App\Services\InventaireService;
+use App\Services\RapportService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -59,6 +60,14 @@ class RapportInventaire extends Component
     {
         $service = app(InventaireService::class);
         return $service->calculerStatistiques($this->inventaire);
+    }
+
+    /**
+     * Propriété calculée : Détail des immobilisations par emplacement
+     */
+    public function getDetailParEmplacementProperty(): array
+    {
+        return app(RapportService::class)->getDetailParEmplacement($this->inventaire);
     }
 
     /**
