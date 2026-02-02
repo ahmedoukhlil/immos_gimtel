@@ -338,6 +338,7 @@ class ScanController extends Controller
      */
     public function getEtats()
     {
+        // 3 états : Neuf, Bon état, Défectueuse
         $etats = Etat::orderBy('Etat')
             ->get(['idEtat', 'Etat', 'CodeEtat'])
             ->map(function ($etat) {
@@ -376,14 +377,18 @@ class ScanController extends Controller
             return strtolower($etat->CodeEtat);
         }
 
-        // Mapping par libellé Etat
+        // Mapping par libellé Etat (3 états: Neuf, Bon état, Défectueuse)
         $map = [
             'neuf' => 'neuf',
             'bon' => 'bon',
-            'moyen' => 'moyen',
+            'bon etat' => 'bon',
+            'bon état' => 'bon',
+            'moyen' => 'bon',
             'mauvais' => 'mauvais',
             'défectueux' => 'mauvais',
             'defectueux' => 'mauvais',
+            'défectueuse' => 'mauvais',
+            'defectueuse' => 'mauvais',
         ];
         $label = mb_strtolower(trim($etat->Etat));
         return $map[$label] ?? 'bon';
