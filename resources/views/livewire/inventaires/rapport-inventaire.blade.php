@@ -260,7 +260,7 @@
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach(collect($this->statistiques['par_emplacement'] ?? [])->sortByDesc('taux_conformite')->take(10) as $emp)
                                     <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ $emp['code'] }}</td>
+                                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ $emp['designation'] ?? $emp['code'] }}</td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ $emp['localisation'] ?? 'N/A' }}</td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{{ $emp['biens_scannes'] }}/{{ $emp['biens_attendus'] }}</td>
                                         <td class="px-4 py-3 whitespace-nowrap text-sm text-green-600 font-medium">{{ $emp['biens_presents'] ?? 0 }}</td>
@@ -285,7 +285,7 @@
                         class="block w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                         <option value="all">Tous les emplacements</option>
                         @foreach($this->statistiques['par_emplacement'] ?? [] as $emp)
-                            <option value="{{ $emp['emplacement_id'] }}">{{ $emp['code'] }} ({{ $emp['localisation'] ?? 'N/A' }})</option>
+                            <option value="{{ $emp['emplacement_id'] }}">{{ $emp['designation'] ?? $emp['code'] }} ({{ $emp['localisation'] ?? 'N/A' }})</option>
                         @endforeach
                     </select>
                 </div>
@@ -295,8 +295,8 @@
                         <div class="bg-gray-50 rounded-lg p-4 mb-4">
                             <div class="flex items-center justify-between mb-3">
                                 <div>
-                                    <h3 class="text-base font-semibold text-gray-900">{{ $emp['code'] }}</h3>
-                                    <p class="text-sm text-gray-600">{{ $emp['designation'] ?? $emp['code'] }} — {{ $emp['localisation'] ?? 'N/A' }}</p>
+                                    <h3 class="text-base font-semibold text-gray-900">{{ $emp['designation'] ?? $emp['code'] }}</h3>
+                                    <p class="text-sm text-gray-600">{{ $emp['localisation'] ?? 'N/A' }}</p>
                                 </div>
                                 <span class="text-sm font-medium {{ ($emp['taux_conformite'] ?? 0) >= 90 ? 'text-green-600' : (($emp['taux_conformite'] ?? 0) >= 70 ? 'text-yellow-600' : 'text-red-600') }}">
                                     {{ round($emp['taux_conformite'] ?? 0, 1) }}%
