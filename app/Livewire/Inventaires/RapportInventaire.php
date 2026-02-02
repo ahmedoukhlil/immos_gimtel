@@ -204,16 +204,12 @@ class RapportInventaire extends Component
     }
 
     /**
-     * Exporte le rapport en PDF (stream direct, sans fichier disque)
+     * Exporte le rapport en PDF
+     * Redirection vers la route d'export (évite que Livewire tente de sérialiser le PDF en JSON)
      */
     public function exportPDF()
     {
-        try {
-            $service = app(\App\Services\RapportService::class);
-            return $service->streamRapportPDF($this->inventaire);
-        } catch (\Exception $e) {
-            session()->flash('error', 'Erreur lors de la génération du PDF: ' . $e->getMessage());
-        }
+        return redirect()->route('inventaires.export-pdf', $this->inventaire);
     }
 
     /**
