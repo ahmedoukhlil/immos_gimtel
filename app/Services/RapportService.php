@@ -59,10 +59,10 @@ class RapportService
     }
 
     /**
-     * Détail des immobilisations par emplacement pour le rapport PDF
+     * Détail des immobilisations par emplacement (PDF et vue rapport)
      * Chaque emplacement liste les immos avec : Code, Désignation, Attendu, Trouvé, Conformité, État
      */
-    protected function getDetailParEmplacement(Inventaire $inventaire): array
+    public function getDetailParEmplacement(Inventaire $inventaire): array
     {
         $localisationIds = $inventaire->inventaireLocalisations()->pluck('localisation_id')->unique()->toArray();
         $emplacements = Emplacement::whereIn('idLocalisation', $localisationIds)
@@ -98,6 +98,7 @@ class RapportService
             }
 
             $result[] = [
+                'emplacement_id' => $emplacement->idEmplacement,
                 'code' => $emplacement->CodeEmplacement ?? $emplacement->Emplacement ?? 'N/A',
                 'designation' => $emplacement->Emplacement ?? $emplacement->CodeEmplacement ?? 'N/A',
                 'localisation' => $emplacement->localisation?->CodeLocalisation ?? $emplacement->localisation?->Localisation ?? 'N/A',
