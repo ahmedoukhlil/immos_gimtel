@@ -26,7 +26,7 @@
             font-family: 'DejaVu Sans', sans-serif;
             font-size: 9pt;
             line-height: 1.5;
-            color: #000;
+            color: #1f2937;
         }
 
         /* ============================================
@@ -42,7 +42,7 @@
             border-bottom: 2px solid #4F46E5;
             padding: 5px 0;
             font-size: 8pt;
-            color: #666;
+            color: #6b7280;
         }
 
         .footer {
@@ -52,14 +52,10 @@
             right: 0;
             height: 1.5cm;
             text-align: center;
-            border-top: 1px solid #ddd;
+            border-top: 1px solid #e5e7eb;
             padding: 5px 0;
             font-size: 8pt;
-            color: #666;
-        }
-
-        .page-number {
-            text-align: center;
+            color: #6b7280;
         }
 
         .page-number:after {
@@ -71,256 +67,260 @@
            ============================================ */
         .cover-page {
             text-align: center;
-            padding: 80px 30px;
+            padding: 60px 30px;
             page-break-after: always;
         }
 
         .cover-title {
-            font-size: 24pt;
+            font-size: 22pt;
             font-weight: bold;
             color: #4F46E5;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
         }
 
         .cover-subtitle {
-            font-size: 16pt;
-            color: #666;
-            margin-bottom: 30px;
+            font-size: 14pt;
+            color: #6b7280;
+            margin-bottom: 25px;
         }
 
         .status-badge {
             display: inline-block;
-            padding: 8px 25px;
-            border-radius: 15px;
+            padding: 10px 28px;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 12pt;
+            font-size: 11pt;
             margin: 15px 0;
         }
 
         .status-conforme {
-            background-color: #10B981;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
             color: white;
         }
 
         .status-non-conforme {
-            background-color: #EF4444;
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
             color: white;
         }
 
         .cover-info {
-            margin: 15px 0;
-            font-size: 11pt;
+            margin: 18px 0;
+            font-size: 10pt;
             text-align: left;
-            max-width: 500px;
+            max-width: 420px;
             margin-left: auto;
             margin-right: auto;
+            padding: 15px 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
         }
 
-        /* ============================================
-           TYPOGRAPHY
-           ============================================ */
-        h1 {
-            font-size: 16pt;
-            color: #4F46E5;
-            border-bottom: 2px solid #4F46E5;
-            padding-bottom: 5px;
-            margin-bottom: 12px;
-            margin-top: 20px;
-            page-break-after: avoid;
-        }
-
-        h2 {
-            font-size: 12pt;
-            color: #1F2937;
-            margin-top: 15px;
-            margin-bottom: 8px;
-            page-break-after: avoid;
-        }
-
-        h3 {
-            font-size: 10pt;
-            color: #374151;
-            margin-top: 12px;
+        .cover-info p {
             margin-bottom: 6px;
         }
 
-        p {
-            margin-bottom: 8px;
-        }
-
         /* ============================================
-           TABLES
+           STATS CARDS - Synthèse
            ============================================ */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 12px 0;
-            font-size: 8pt;
-            page-break-inside: auto;
-        }
-
-        thead {
-            background-color: #4F46E5;
-            color: white;
-        }
-
-        thead tr {
-            page-break-inside: avoid;
-            page-break-after: avoid;
-        }
-
-        th {
-            padding: 6px 4px;
-            text-align: left;
-            font-weight: bold;
-            border: 1px solid #E5E7EB;
-        }
-
-        td {
-            padding: 5px 4px;
-            border: 1px solid #E5E7EB;
-            vertical-align: top;
-        }
-
-        tbody tr {
-            page-break-inside: avoid;
-        }
-
-        tbody tr:nth-child(even) {
-            background-color: #F9FAFB;
-        }
-
-        /* ============================================
-           STATS GRID
-           ============================================ */
-        .stats-grid {
+        .stats-row {
             display: table;
             width: 100%;
-            margin: 15px 0;
+            margin: 18px 0;
             page-break-inside: avoid;
         }
 
         .stat-card {
             display: table-cell;
             width: 25%;
-            padding: 12px;
+            padding: 14px 10px;
             text-align: center;
-            background: #F9FAFB;
-            border: 1px solid #E5E7EB;
+            border: 1px solid #e5e7eb;
+            background: #f9fafb;
         }
 
+        .stat-card:first-child { border-left: none; }
+        .stat-card:not(:last-child) { border-right: 1px solid #e5e7eb; }
+
         .stat-number {
-            font-size: 20pt;
+            font-size: 18pt;
             font-weight: bold;
-            color: #4F46E5;
             display: block;
         }
 
+        .stat-number.primary { color: #4F46E5; }
+        .stat-number.success { color: #10B981; }
+        .stat-number.warning { color: #F59E0B; }
+        .stat-number.danger { color: #EF4444; }
+
         .stat-label {
-            font-size: 8pt;
-            color: #666;
+            font-size: 7pt;
+            color: #6b7280;
             margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         /* ============================================
-           BOXES
+           SECTION TITLES
+           ============================================ */
+        h1 {
+            font-size: 14pt;
+            color: #4F46E5;
+            border-bottom: 2px solid #4F46E5;
+            padding-bottom: 6px;
+            margin-bottom: 14px;
+            margin-top: 22px;
+            page-break-after: avoid;
+        }
+
+        h2 {
+            font-size: 11pt;
+            color: #374151;
+            margin-top: 16px;
+            margin-bottom: 10px;
+            page-break-after: avoid;
+        }
+
+        /* ============================================
+           TABLE - Résultats par emplacement
+           ============================================ */
+        .table-emplacements {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+            font-size: 8pt;
+            page-break-inside: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .table-emplacements thead {
+            background: linear-gradient(180deg, #4F46E5 0%, #4338ca 100%);
+            color: white;
+        }
+
+        .table-emplacements th {
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #4338ca;
+        }
+
+        .table-emplacements th.text-right { text-align: right; }
+        .table-emplacements th.text-center { text-align: center; }
+
+        .table-emplacements td {
+            padding: 8px;
+            border: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+
+        .table-emplacements tbody tr {
+            page-break-inside: avoid;
+        }
+
+        .table-emplacements tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        .table-emplacements tbody tr:hover {
+            background-color: #f3f4f6;
+        }
+
+        .table-emplacements .text-right { text-align: right; }
+        .table-emplacements .text-center { text-align: center; }
+
+        /* Écart badges */
+        .ecart-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 8pt;
+        }
+
+        .ecart-ok {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .ecart-manquant {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .ecart-surplus {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Conformité badges */
+        .conformite-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 8pt;
+        }
+
+        .conformite-excellent {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .conformite-bon {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .conformite-faible {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .conformite-insuffisant {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* ============================================
+           INFO BOXES
            ============================================ */
         .info-box {
-            background: #F3F4F6;
+            background: #eff6ff;
             border-left: 4px solid #4F46E5;
-            padding: 8px 12px;
-            margin: 12px 0;
+            padding: 12px 14px;
+            margin: 14px 0;
             page-break-inside: avoid;
-        }
-
-        .warning-box {
-            background: #FEF3C7;
-            border-left: 4px solid #F59E0B;
-            padding: 8px 12px;
-            margin: 12px 0;
-            page-break-inside: avoid;
-        }
-
-        .danger-box {
-            background: #FEE2E2;
-            border-left: 4px solid #EF4444;
-            padding: 8px 12px;
-            margin: 12px 0;
-            page-break-inside: avoid;
+            border-radius: 0 6px 6px 0;
         }
 
         .success-box {
-            background: #D1FAE5;
+            background: #ecfdf5;
             border-left: 4px solid #10B981;
-            padding: 8px 12px;
-            margin: 12px 0;
+            padding: 12px 14px;
+            margin: 14px 0;
             page-break-inside: avoid;
+            border-radius: 0 6px 6px 0;
         }
 
-        /* ============================================
-           BADGES
-           ============================================ */
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 7pt;
-            font-weight: bold;
-        }
-
-        .badge-success {
-            background-color: #D1FAE5;
-            color: #065F46;
-        }
-
-        .badge-warning {
-            background-color: #FEF3C7;
-            color: #92400E;
-        }
-
-        .badge-danger {
-            background-color: #FEE2E2;
-            color: #991B1B;
-        }
-
-        .badge-info {
-            background-color: #DBEAFE;
-            color: #1E40AF;
-        }
-
-        /* ============================================
-           UTILITIES
-           ============================================ */
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .page-break {
-            page-break-after: always;
-        }
-
-        .no-break {
+        .warning-box {
+            background: #fffbeb;
+            border-left: 4px solid #F59E0B;
+            padding: 12px 14px;
+            margin: 14px 0;
             page-break-inside: avoid;
+            border-radius: 0 6px 6px 0;
         }
 
-        .mt-15 {
-            margin-top: 15px;
-        }
-
-        .mb-15 {
-            margin-bottom: 15px;
-        }
-
-        ul {
-            margin: 8px 0 8px 20px;
-        }
-
-        li {
-            margin-bottom: 4px;
+        .danger-box {
+            background: #fef2f2;
+            border-left: 4px solid #EF4444;
+            padding: 12px 14px;
+            margin: 14px 0;
+            page-break-inside: avoid;
+            border-radius: 0 6px 6px 0;
         }
 
         /* ============================================
@@ -336,16 +336,28 @@
         }
 
         .toc li {
-            margin-bottom: 6px;
+            margin-bottom: 8px;
+            padding: 6px 0;
             padding-left: 20px;
+            border-bottom: 1px dotted #e5e7eb;
         }
+
+        /* ============================================
+           UTILITIES
+           ============================================ */
+        .page-break { page-break-after: always; }
+        .no-break { page-break-inside: avoid; }
+        .mt-15 { margin-top: 15px; }
+        .mb-15 { margin-bottom: 15px; }
+        ul { margin: 8px 0 8px 20px; }
+        li { margin-bottom: 4px; }
     </style>
 </head>
 <body>
 
     <!-- HEADER -->
     <div class="header">
-        <strong>Rapport Inventaire {{ $inventaire->annee }}</strong> | Généré le {{ now()->format('d/m/Y à H:i') }}
+        <strong>Rapport d'inventaire {{ $inventaire->annee }}</strong> — Résultats détaillés par emplacement — Généré le {{ now()->format('d/m/Y à H:i') }}
     </div>
 
     <!-- FOOTER -->
@@ -355,28 +367,24 @@
 
     <!-- COVER PAGE -->
     <div class="cover-page">
-        <div class="cover-title">
-            RAPPORT D'INVENTAIRE
-        </div>
-        <div class="cover-subtitle">
-            Année {{ $inventaire->annee }}
-        </div>
+        <div class="cover-title">RAPPORT D'INVENTAIRE</div>
+        <div class="cover-subtitle">Année {{ $inventaire->annee }} — Résultats détaillés</div>
 
         @php
-            $tauxConformite = $statistiques['taux_conformite'];
+            $tauxConformite = $statistiques['taux_conformite'] ?? 0;
             $statusClass = $tauxConformite >= 95 ? 'status-conforme' : 'status-non-conforme';
-            $statusText = $tauxConformite >= 95 ? 'CONFORME' : 'NON CONFORME';
+            $statusText = $tauxConformite >= 95 ? 'CONFORME' : 'À AMÉLIORER';
         @endphp
 
-        <div class="status-badge {{ $statusClass }}">
-            {{ $statusText }}
-        </div>
+        <div class="status-badge {{ $statusClass }}">{{ $statusText }}</div>
 
         <div class="cover-info">
-            <p><strong>Date de début :</strong> {{ $inventaire->date_debut->format('d/m/Y') }}</p>
-            <p><strong>Date de fin :</strong> {{ $inventaire->date_fin ? $inventaire->date_fin->format('d/m/Y') : 'En cours' }}</p>
-            <p><strong>Durée :</strong> {{ $statistiques['duree_jours'] }} jours</p>
-            <p><strong>Taux de conformité :</strong> {{ number_format($tauxConformite, 2) }}%</p>
+            <p><strong>Période :</strong> {{ $inventaire->date_debut->format('d/m/Y') }} — {{ $inventaire->date_fin ? $inventaire->date_fin->format('d/m/Y') : 'En cours' }}</p>
+            <p><strong>Durée :</strong> {{ $statistiques['duree_jours'] ?? 0 }} jour(s)</p>
+            <p><strong>Taux de conformité :</strong> {{ number_format($tauxConformite, 1) }}%</p>
+            <p><strong>Taux de couverture :</strong> {{ $statistiques['taux_couverture'] ?? 0 }}%</p>
+            <p><strong>Immobilisations attendues :</strong> {{ number_format($statistiques['total_biens_attendus'] ?? 0) }}</p>
+            <p><strong>Immobilisations scannées :</strong> {{ number_format($statistiques['total_biens_scannes'] ?? 0) }}</p>
         </div>
 
         <div class="cover-info mt-15">
@@ -392,14 +400,11 @@
         <h1>Table des matières</h1>
         <ul>
             <li>1. Synthèse générale</li>
-            <li>2. Analyse par localisation</li>
-            <li>3. Performance par agent</li>
-            <li>4. Immobilisations présentes</li>
-            <li>5. Immobilisations déplacées</li>
-            <li>6. Immobilisations absentes</li>
-            <li>7. Immobilisations non scannées</li>
-            <li>8. Anomalies détectées</li>
-            <li>9. Recommandations</li>
+            <li>2. Résultats par emplacement (détaillé)</li>
+            <li>3. Immobilisations présentes</li>
+            <li>4. Immobilisations déplacées</li>
+            <li>5. Immobilisations absentes</li>
+            <li>6. Anomalies et recommandations</li>
         </ul>
     </div>
 
@@ -407,329 +412,248 @@
     <div class="page-break"></div>
     <h1>1. Synthèse générale</h1>
 
-    <div class="stats-grid no-break">
+    <div class="stats-row no-break">
         <div class="stat-card">
-            <span class="stat-number">{{ $statistiques['total_biens_attendus'] }}</span>
-            <span class="stat-label">Immobilisations inventoriées</span>
+            <span class="stat-number primary">{{ number_format($statistiques['total_biens_attendus'] ?? 0) }}</span>
+            <span class="stat-label">Attendues</span>
         </div>
         <div class="stat-card">
-            <span class="stat-number" style="color: #10B981;">{{ $statistiques['biens_presents'] }}</span>
-            <span class="stat-label">Présents</span>
+            <span class="stat-number success">{{ number_format($statistiques['biens_presents'] ?? 0) }}</span>
+            <span class="stat-label">Présentes</span>
         </div>
         <div class="stat-card">
-            <span class="stat-number" style="color: #F59E0B;">{{ $statistiques['biens_deplaces'] }}</span>
-            <span class="stat-label">Déplacés</span>
+            <span class="stat-number warning">{{ number_format($statistiques['biens_deplaces'] ?? 0) }}</span>
+            <span class="stat-label">Déplacées</span>
         </div>
         <div class="stat-card">
-            <span class="stat-number" style="color: #EF4444;">{{ $statistiques['biens_absents'] }}</span>
-            <span class="stat-label">Absents</span>
+            <span class="stat-number danger">{{ number_format($statistiques['biens_absents'] ?? 0) }}</span>
+            <span class="stat-label">Absentes</span>
         </div>
     </div>
 
     <div class="info-box no-break">
-        <p><strong>Taux de conformité global :</strong> {{ number_format($statistiques['taux_conformite'], 2) }}%</p>
-        <p><strong>Progression :</strong> {{ number_format($statistiques['progression_globale'], 2) }}% complété</p>
-        <p><strong>Localisations scannées :</strong> {{ $statistiques['localisations_terminees'] ?? 0 }} / {{ $statistiques['total_localisations'] ?? 0 }}</p>
-        <p><strong>Valeur totale scannée :</strong> {{ number_format($statistiques['valeur_totale_scannee'] ?? 0, 0, ',', ' ') }} MRU</p>
+        <p><strong>Taux de conformité global :</strong> {{ number_format($statistiques['taux_conformite'] ?? 0, 1) }}%</p>
+        <p><strong>Taux de couverture :</strong> {{ $statistiques['taux_couverture'] ?? 0 }}% ({{ $statistiques['total_biens_scannes'] ?? 0 }}/{{ $statistiques['total_biens_attendus'] ?? 0 }} scannées)</p>
+        <p><strong>Emplacements inventoriés :</strong> {{ count($statistiques['par_emplacement'] ?? []) }}</p>
     </div>
 
-    @if(isset($statistiques['par_nature']) && count($statistiques['par_nature']) > 0)
-    <h2>Répartition par nature de bien</h2>
-    <table class="no-break">
-        <thead>
-            <tr>
-                <th>Nature</th>
-                <th class="text-right">Total</th>
-                <th class="text-right">Présents</th>
-                <th class="text-right">Déplacés</th>
-                <th class="text-right">Absents</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($statistiques['par_nature'] as $nature => $stats)
-            <tr>
-                <td><strong>{{ ucfirst($nature) }}</strong></td>
-                <td class="text-right">{{ $stats['total'] ?? 0 }}</td>
-                <td class="text-right">{{ $stats['presents'] ?? 0 }}</td>
-                <td class="text-right">{{ $stats['deplaces'] ?? 0 }}</td>
-                <td class="text-right">{{ $stats['absents'] ?? 0 }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-    @endif
-
-    <!-- SECTION 2: ANALYSE PAR LOCALISATION -->
+    <!-- SECTION 2: RÉSULTATS PAR EMPLACEMENT -->
     <div class="page-break"></div>
-    <h1>2. Analyse par localisation</h1>
+    <h1>2. Résultats par emplacement</h1>
 
-    @if(isset($performanceLocalisations) && count($performanceLocalisations) > 0)
-    <table>
+    <p class="mb-15">Tableau récapitulatif des immobilisations attendues, scannées et de l'écart par emplacement.</p>
+
+    @php $parEmplacement = $statistiques['par_emplacement'] ?? []; @endphp
+    @if(count($parEmplacement) > 0)
+    <table class="table-emplacements">
         <thead>
             <tr>
-                <th>Code</th>
-                <th>Désignation</th>
-                <th class="text-right">Attendus</th>
-                <th class="text-right">Scannés</th>
-                <th class="text-right">Présents</th>
-                <th class="text-right">Déplacés</th>
-                <th class="text-right">Absents</th>
-                <th class="text-right">Conformité</th>
+                <th>Emplacement</th>
+                <th>Localisation</th>
+                <th class="text-right">Attendues</th>
+                <th class="text-right">Scannées</th>
+                <th class="text-right">Écart</th>
+                <th class="text-center">Conformité</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($performanceLocalisations as $perf)
+            @foreach($parEmplacement as $emp)
+            @php
+                $ecart = ($emp['biens_attendus'] ?? 0) - ($emp['biens_scannes'] ?? 0);
+                $ecartClass = $ecart == 0 ? 'ecart-ok' : ($ecart > 0 ? 'ecart-manquant' : 'ecart-surplus');
+                $ecartText = $ecart == 0 ? 'Conforme' : ($ecart > 0 ? '-' . $ecart . ' manquant(s)' : '+' . abs($ecart));
+                $taux = $emp['taux_conformite'] ?? 0;
+                $conformiteClass = $taux >= 95 ? 'conformite-excellent' : ($taux >= 85 ? 'conformite-bon' : ($taux >= 70 ? 'conformite-faible' : 'conformite-insuffisant'));
+            @endphp
             <tr>
-                <td><strong>{{ $perf['code'] ?? 'N/A' }}</strong></td>
-                <td>{{ Str::limit($perf['designation'] ?? 'N/A', 30) }}</td>
-                <td class="text-right">{{ $perf['attendus'] ?? 0 }}</td>
-                <td class="text-right">{{ $perf['scannes'] ?? 0 }}</td>
-                <td class="text-right">{{ $perf['presents'] ?? 0 }}</td>
-                <td class="text-right">{{ $perf['deplaces'] ?? 0 }}</td>
-                <td class="text-right">{{ $perf['absents'] ?? 0 }}</td>
+                <td><strong>{{ $emp['code'] ?? 'N/A' }}</strong></td>
+                <td>{{ $emp['localisation'] ?? 'N/A' }}</td>
+                <td class="text-right">{{ $emp['biens_attendus'] ?? 0 }}</td>
+                <td class="text-right">{{ $emp['biens_scannes'] ?? 0 }}</td>
                 <td class="text-right">
-                    @if(($perf['taux_conformite'] ?? 0) >= 95)
-                        <span class="badge badge-success">{{ number_format($perf['taux_conformite'], 1) }}%</span>
-                    @elseif(($perf['taux_conformite'] ?? 0) >= 80)
-                        <span class="badge badge-warning">{{ number_format($perf['taux_conformite'], 1) }}%</span>
-                    @else
-                        <span class="badge badge-danger">{{ number_format($perf['taux_conformite'], 1) }}%</span>
-                    @endif
+                    <span class="ecart-badge {{ $ecartClass }}">{{ $ecartText }}</span>
+                </td>
+                <td class="text-center">
+                    <span class="conformite-badge {{ $conformiteClass }}">{{ number_format($taux, 1) }}%</span>
                 </td>
             </tr>
             @endforeach
         </tbody>
     </table>
+
+    <div class="info-box no-break mt-15">
+        <p><strong>Légende des écarts :</strong></p>
+        <p>• <span class="ecart-badge ecart-ok">Conforme</span> = Nombre scanné égal au nombre attendu</p>
+        <p>• <span class="ecart-badge ecart-manquant">-X manquant(s)</span> = X immobilisation(s) non trouvée(s) ou non scannée(s)</p>
+        <p>• <span class="ecart-badge ecart-surplus">+X</span> = X immobilisation(s) scannée(s) en surplus</p>
+    </div>
+    @else
+    <div class="warning-box no-break">
+        <p>Aucune donnée par emplacement disponible. Les inventaires peuvent utiliser le mode par localisation.</p>
+    </div>
     @endif
 
-    <!-- SECTION 3: PERFORMANCE PAR AGENT -->
-    @if(isset($performanceAgents) && count($performanceAgents) > 0)
-    <div class="page-break"></div>
-    <h1>3. Performance par agent</h1>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Agent</th>
-                <th class="text-right">Localisations</th>
-                <th class="text-right">Immobilisations scannées</th>
-                <th class="text-right">Durée totale</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($performanceAgents as $perf)
-            <tr>
-                <td><strong>{{ $perf['agent'] ?? $perf['agent_name'] ?? 'N/A' }}</strong></td>
-                <td class="text-right">{{ $perf['localisations'] ?? 0 }}</td>
-                <td class="text-right">{{ $perf['biens_scannes'] ?? 0 }}</td>
-                <td class="text-right">{{ number_format(($perf['duree_totale_minutes'] ?? 0) / 60, 1) }}h</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-    @endif
-
-    <!-- SECTION 4: BIENS PRÉSENTS -->
+    <!-- SECTION 3: IMMOBILISATIONS PRÉSENTES -->
     @if(isset($biensPresents) && $biensPresents->count() > 0)
     <div class="page-break"></div>
-    <h1>4. Immobilisations présentes ({{ $biensPresents->count() }})</h1>
-    
-    <table>
+    <h1>3. Immobilisations présentes ({{ $biensPresents->count() }})</h1>
+    <table class="table-emplacements">
         <thead>
             <tr>
                 <th>Code</th>
                 <th>Désignation</th>
                 <th>Localisation</th>
-                <th class="text-right">Valeur (MRU)</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($biensPresents->take(100) as $bien)
+            @foreach($biensPresents->take(80) as $bien)
             <tr>
-                <td>{{ $bien['code'] ?? ($bien->code_inventaire ?? 'N/A') }}</td>
-                <td>{{ Str::limit($bien['designation'] ?? ($bien->designation ?? 'N/A'), 40) }}</td>
-                <td>{{ $bien['localisation'] ?? ($bien->localisation->code ?? 'N/A') }}</td>
-                <td class="text-right">{{ number_format($bien['valeur'] ?? ($bien->valeur_acquisition ?? 0), 0, ',', ' ') }}</td>
+                <td>{{ $bien['code'] ?? 'N/A' }}</td>
+                <td>{{ Str::limit($bien['designation'] ?? 'N/A', 45) }}</td>
+                <td>{{ $bien['localisation'] ?? 'N/A' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
-    @if($biensPresents->count() > 100)
-    <p class="text-center"><em>Liste tronquée à 100 entrées. Total : {{ $biensPresents->count() }}</em></p>
+    @if($biensPresents->count() > 80)
+    <p class="text-center mt-15"><em>Liste tronquée à 80 entrées. Total : {{ $biensPresents->count() }}</em></p>
     @endif
     @endif
 
-    <!-- SECTION 5: BIENS DÉPLACÉS -->
+    <!-- SECTION 4: IMMOBILISATIONS DÉPLACÉES -->
     @if(isset($biensDeplaces) && $biensDeplaces->count() > 0)
     <div class="page-break"></div>
-    <h1>5. Immobilisations déplacées ({{ $biensDeplaces->count() }})</h1>
-
+    <h1>4. Immobilisations déplacées ({{ $biensDeplaces->count() }})</h1>
     <div class="warning-box no-break">
-        <strong>⚠️ Action requise :</strong> Ces immobilisations ont été trouvées dans une localisation différente de celle prévue.
+        <strong>Action requise :</strong> Ces immobilisations ont été trouvées dans une localisation différente de celle prévue.
     </div>
-
-    <table>
+    <table class="table-emplacements">
         <thead>
             <tr>
                 <th>Code</th>
                 <th>Désignation</th>
                 <th>Loc. prévue</th>
                 <th>Loc. réelle</th>
-                <th class="text-right">Valeur</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($biensDeplaces as $bien)
+            @foreach($biensDeplaces->take(80) as $bien)
             <tr>
-                <td>{{ $bien['code'] ?? ($bien->code_inventaire ?? 'N/A') }}</td>
-                <td>{{ Str::limit($bien['designation'] ?? ($bien->designation ?? 'N/A'), 40) }}</td>
-                <td><span class="badge badge-danger">{{ $bien['localisation_prevue'] ?? ($bien->localisation->code ?? 'N/A') }}</span></td>
-                <td><span class="badge badge-warning">{{ $bien['localisation_reelle'] ?? ($bien->localisationReelle->code ?? 'N/A') }}</span></td>
-                <td class="text-right">{{ number_format($bien['valeur'] ?? ($bien->valeur_acquisition ?? 0), 0, ',', ' ') }}</td>
+                <td>{{ $bien['code'] ?? 'N/A' }}</td>
+                <td>{{ Str::limit($bien['designation'] ?? 'N/A', 40) }}</td>
+                <td>{{ $bien['localisation_prevue'] ?? 'N/A' }}</td>
+                <td>{{ $bien['localisation_reelle'] ?? 'N/A' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
+    @if($biensDeplaces->count() > 80)
+    <p class="text-center mt-15"><em>Liste tronquée à 80 entrées. Total : {{ $biensDeplaces->count() }}</em></p>
+    @endif
     @endif
 
-    <!-- SECTION 6: BIENS ABSENTS -->
+    <!-- SECTION 5: IMMOBILISATIONS ABSENTES -->
     @if(isset($biensAbsents) && $biensAbsents->count() > 0)
     <div class="page-break"></div>
-    <h1>6. Immobilisations absentes ({{ $biensAbsents->count() }})</h1>
-
-    @php
-        $valeurTotaleAbsente = $biensAbsents->sum(function($b) { return $b['valeur'] ?? ($b->valeur_acquisition ?? 0); });
-    @endphp
-
+    <h1>5. Immobilisations absentes ({{ $biensAbsents->count() }})</h1>
     <div class="danger-box no-break">
-        <strong>🚨 Attention critique :</strong> {{ $biensAbsents->count() }} immobilisation(s) non trouvée(s), 
-        représentant une valeur totale de <strong>{{ number_format($valeurTotaleAbsente, 0, ',', ' ') }} MRU</strong>.
+        <strong>Attention :</strong> {{ $biensAbsents->count() }} immobilisation(s) non trouvée(s) lors de l'inventaire.
     </div>
-
-    <table>
+    <table class="table-emplacements">
         <thead>
             <tr>
                 <th>Code</th>
                 <th>Désignation</th>
                 <th>Localisation</th>
-                <th class="text-right">Valeur (MRU)</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($biensAbsents->take(100) as $bien)
+            @foreach($biensAbsents->take(80) as $bien)
             <tr>
-                <td>{{ $bien['code'] ?? ($bien->code_inventaire ?? 'N/A') }}</td>
-                <td>{{ Str::limit($bien['designation'] ?? ($bien->designation ?? 'N/A'), 40) }}</td>
-                <td>{{ $bien['localisation'] ?? ($bien->localisation->code ?? 'N/A') }}</td>
-                <td class="text-right">{{ number_format($bien['valeur'] ?? ($bien->valeur_acquisition ?? 0), 0, ',', ' ') }}</td>
+                <td>{{ $bien['code'] ?? 'N/A' }}</td>
+                <td>{{ Str::limit($bien['designation'] ?? 'N/A', 45) }}</td>
+                <td>{{ $bien['localisation'] ?? 'N/A' }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
-    @if($biensAbsents->count() > 100)
-    <p class="text-center"><em>Liste tronquée à 100 entrées. Total : {{ $biensAbsents->count() }}</em></p>
+    @if($biensAbsents->count() > 80)
+    <p class="text-center mt-15"><em>Liste tronquée à 80 entrées. Total : {{ $biensAbsents->count() }}</em></p>
     @endif
     @endif
 
-    <!-- SECTION 7: BIENS NON SCANNÉS -->
-    @if(isset($biensNonScannes) && $biensNonScannes->count() > 0)
+    <!-- SECTION 6: ANOMALIES ET RECOMMANDATIONS -->
+    @if(isset($anomalies) || isset($recommendations))
     <div class="page-break"></div>
-    <h1>7. Immobilisations non scannées ({{ $biensNonScannes->count() }})</h1>
-
-    <div class="warning-box no-break">
-        <strong>⚠️ Information :</strong> Ces immobilisations étaient dans les localisations inventoriées mais n'ont pas été scannées.
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Code</th>
-                <th>Désignation</th>
-                <th>Localisation</th>
-                <th class="text-right">Valeur (MRU)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($biensNonScannes->take(100) as $bien)
-            <tr>
-                <td>{{ $bien->code_inventaire ?? 'N/A' }}</td>
-                <td>{{ Str::limit($bien->designation ?? 'N/A', 40) }}</td>
-                <td>{{ $bien->localisation->code ?? 'N/A' }}</td>
-                <td class="text-right">{{ number_format($bien->valeur_acquisition ?? 0, 0, ',', ' ') }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-    @if($biensNonScannes->count() > 100)
-    <p class="text-center"><em>Liste tronquée à 100 entrées. Total : {{ $biensNonScannes->count() }}</em></p>
-    @endif
-    @endif
-
-    <!-- SECTION 8: ANOMALIES -->
-    @if(isset($anomalies))
-    <div class="page-break"></div>
-    <h1>8. Anomalies détectées</h1>
+    <h1>6. Anomalies et recommandations</h1>
 
     @php
         $totalAnomalies = count($anomalies['localisations_non_demarrees'] ?? []) +
-                         count($anomalies['localisations_bloquees'] ?? []) +
-                         count($anomalies['biens_absents_valeur_haute'] ?? []);
+                         count($anomalies['taux_absence_eleve'] ?? []) +
+                         count($anomalies['biens_defectueux'] ?? []);
     @endphp
 
     @if($totalAnomalies > 0)
         @if(count($anomalies['localisations_non_demarrees'] ?? []) > 0)
-        <h2>Localisations non démarrées</h2>
+        <h2>Emplacements non démarrés</h2>
         <div class="warning-box no-break">
             <ul>
                 @foreach($anomalies['localisations_non_demarrees'] as $loc)
-                <li>{{ $loc['code'] ?? 'N/A' }} - {{ $loc['designation'] ?? 'N/A' }}</li>
+                <li>{{ $loc['code'] ?? 'N/A' }} — {{ $loc['designation'] ?? 'N/A' }}</li>
                 @endforeach
             </ul>
         </div>
         @endif
 
-        @if(count($anomalies['biens_absents_valeur_haute'] ?? []) > 0)
-        <h2>Immobilisations absentes de valeur élevée</h2>
+        @if(count($anomalies['taux_absence_eleve'] ?? []) > 0)
+        <h2>Taux d'absence élevé</h2>
+        <div class="warning-box no-break">
+            <ul>
+                @foreach($anomalies['taux_absence_eleve'] as $a)
+                <li>{{ $a['code'] ?? 'N/A' }} — {{ $a['taux_absence'] ?? 0 }}% absents ({{ $a['biens_absents'] ?? 0 }} immobilisations)</li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
+
+        @if(count($anomalies['biens_defectueux'] ?? []) > 0)
+        <h2>Immobilisations signalées défectueuses</h2>
         <div class="danger-box no-break">
             <ul>
-                @foreach($anomalies['biens_absents_valeur_haute'] as $bien)
-                <li>{{ $bien['code'] ?? 'N/A' }} - {{ number_format($bien['valeur'] ?? 0, 0, ',', ' ') }} MRU</li>
+                @foreach($anomalies['biens_defectueux'] as $b)
+                <li>{{ $b['code'] ?? 'N/A' }} — {{ $b['designation'] ?? 'N/A' }} ({{ $b['localisation'] ?? 'N/A' }})</li>
                 @endforeach
             </ul>
         </div>
         @endif
     @else
     <div class="success-box no-break">
-        ✓ Aucune anomalie détectée. Excellent travail !
+        <strong>✓ Aucune anomalie majeure détectée.</strong>
     </div>
     @endif
-    @endif
 
-    <!-- SECTION 9: RECOMMANDATIONS -->
-    @if(isset($recommendations))
-    <div class="page-break"></div>
-    <h1>9. Recommandations</h1>
-
+    @if(isset($recommendations) && (count($recommendations['corrections_immediates'] ?? []) > 0 || count($recommendations['ameliorations_organisationnelles'] ?? []) > 0))
+    <h2>Recommandations</h2>
     @if(count($recommendations['corrections_immediates'] ?? []) > 0)
-    <h2>Corrections immédiates nécessaires</h2>
     <div class="danger-box no-break">
+        <strong>Corrections immédiates :</strong>
         <ul>
-            @foreach($recommendations['corrections_immediates'] as $reco)
-            <li>{{ $reco }}</li>
+            @foreach($recommendations['corrections_immediates'] as $r)
+            <li>{{ $r }}</li>
             @endforeach
         </ul>
     </div>
     @endif
-
     @if(count($recommendations['ameliorations_organisationnelles'] ?? []) > 0)
-    <h2>Améliorations organisationnelles</h2>
-    <div class="warning-box no-break">
+    <div class="info-box no-break">
+        <strong>Améliorations :</strong>
         <ul>
-            @foreach($recommendations['ameliorations_organisationnelles'] as $reco)
-            <li>{{ $reco }}</li>
+            @foreach($recommendations['ameliorations_organisationnelles'] as $r)
+            <li>{{ $r }}</li>
             @endforeach
         </ul>
     </div>
+    @endif
     @endif
     @endif
 

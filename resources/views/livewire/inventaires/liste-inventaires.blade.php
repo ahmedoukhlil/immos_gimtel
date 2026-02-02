@@ -61,6 +61,41 @@
             </div>
         </div>
 
+        {{-- Cartes statistiques des résultats d'inventaire --}}
+        @if($this->statistiquesResultats['nombre_inventaires_termines'] > 0)
+        @php $resultats = $this->statistiquesResultats; @endphp
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Résultats des inventaires</h2>
+            <p class="text-sm text-gray-500 mb-4">Statistiques agrégées des {{ $resultats['nombre_inventaires_termines'] }} inventaire(s) terminé(s) et clôturé(s)</p>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                    <p class="text-xs text-gray-500 font-medium uppercase">Total scannés</p>
+                    <p class="text-xl font-bold text-gray-900 mt-1">{{ number_format($resultats['total_scans']) }}</p>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4 border border-green-100">
+                    <p class="text-xs text-green-700 font-medium uppercase">Présents</p>
+                    <p class="text-xl font-bold text-green-700 mt-1">{{ number_format($resultats['biens_presents']) }}</p>
+                </div>
+                <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-100">
+                    <p class="text-xs text-yellow-700 font-medium uppercase">Déplacés</p>
+                    <p class="text-xl font-bold text-yellow-700 mt-1">{{ number_format($resultats['biens_deplaces']) }}</p>
+                </div>
+                <div class="bg-red-50 rounded-lg p-4 border border-red-100">
+                    <p class="text-xs text-red-700 font-medium uppercase">Absents</p>
+                    <p class="text-xl font-bold text-red-700 mt-1">{{ number_format($resultats['biens_absents']) }}</p>
+                </div>
+                <div class="bg-amber-50 rounded-lg p-4 border border-amber-100">
+                    <p class="text-xs text-amber-700 font-medium uppercase">Défectueux</p>
+                    <p class="text-xl font-bold text-amber-700 mt-1">{{ number_format($resultats['biens_defectueux']) }}</p>
+                </div>
+                <div class="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
+                    <p class="text-xs text-indigo-700 font-medium uppercase">Conformité</p>
+                    <p class="text-xl font-bold text-indigo-700 mt-1">{{ $resultats['taux_conformite'] }}%</p>
+                </div>
+            </div>
+        </div>
+        @endif
+
         {{-- Bouton principal pour démarrer un inventaire --}}
         @if($isAdmin)
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

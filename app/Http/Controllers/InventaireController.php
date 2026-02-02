@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Inventaire;
+use App\Services\RapportService;
 use Illuminate\Http\Request;
 
 class InventaireController extends Controller
@@ -93,8 +94,13 @@ class InventaireController extends Controller
      */
     public function exportPDF(Inventaire $inventaire)
     {
-        // TODO: Implémenter l'export PDF de l'inventaire
-        return redirect()->back()->with('info', 'Fonctionnalité en cours de développement');
+        try {
+            $service = app(RapportService::class);
+            $filePath = $service->genererRapportPDF($inventaire);
+            return response()->download(storage_path('app/' . $filePath));
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erreur lors de la génération du PDF: ' . $e->getMessage());
+        }
     }
 
     /**
