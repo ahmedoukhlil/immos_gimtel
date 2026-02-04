@@ -113,18 +113,29 @@
                         </a>
                     </div>
                 @else
-                    <div class="flex items-center justify-between">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
                             <p class="text-sm text-gray-500">Un inventaire est déjà en cours</p>
                             <p class="text-lg font-semibold text-gray-900 mt-1">
                                 Inventaire {{ $this->inventaireEnCours->annee }} - {{ $statuts[$this->inventaireEnCours->statut]['label'] }}
                             </p>
+                            <p class="text-sm text-gray-500 mt-1">Terminez-le ou clôturez-le avant de pouvoir en démarrer un autre.</p>
                         </div>
-                        <a 
-                            href="{{ route('inventaires.show', $this->inventaireEnCours) }}"
-                            class="inline-flex items-center px-6 py-3 border border-transparent rounded-lg text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
-                            Voir l'inventaire en cours
-                        </a>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <a 
+                                href="{{ route('inventaires.show', $this->inventaireEnCours) }}"
+                                class="inline-flex items-center px-5 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">
+                                Voir l'inventaire en cours
+                            </a>
+                            <a 
+                                href="{{ route('inventaires.create') }}"
+                                class="inline-flex items-center px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                </svg>
+                                Démarrer un nouvel inventaire
+                            </a>
+                        </div>
                     </div>
                 @endif
             </div>
