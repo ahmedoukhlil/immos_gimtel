@@ -93,9 +93,13 @@ class DashboardInventaire extends Component
             ? round(($localisationsTerminees / $totalLocalisations) * 100, 1) 
             : 0;
 
-        $tauxConformite = $totalBiensScannes > 0 
-            ? round(($biensPresents / $totalBiensScannes) * 100, 1) 
+        // Conformité réelle = présents / total attendus (pas seulement scannés)
+        $tauxConformite = $totalBiensAttendus > 0 
+            ? round(($biensPresents / $totalBiensAttendus) * 100, 1) 
             : 0;
+        
+        // Non encore vérifiés = attendus - scannés
+        $biensNonVerifies = max(0, $totalBiensAttendus - $totalBiensScannes);
 
         $dureeJours = $this->inventaire->duree ?? 0;
 
@@ -124,6 +128,7 @@ class DashboardInventaire extends Component
             'progression_globale' => $progressionGlobale,
             'progression_localisations' => $progressionLocalisations,
             'taux_conformite' => $tauxConformite,
+            'biens_non_verifies' => $biensNonVerifies,
             'duree_jours' => $dureeJours,
             'scans_aujourdhui' => $scansAujourdhui,
             'vitesse_moyenne' => $vitesseMoyenne,
@@ -304,6 +309,8 @@ class DashboardInventaire extends Component
                 'code' => $scan->code_inventaire,
                 'designation' => $scan->designation,
                 'localisation' => $scan->localisationReelle?->CodeLocalisation ?? $scan->localisationReelle?->Localisation ?? 'N/A',
+                'photo_url' => $scan->photo_url,
+                'commentaire' => $scan->commentaire,
             ];
         }
 

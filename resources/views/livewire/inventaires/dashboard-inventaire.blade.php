@@ -109,8 +109,9 @@
                     <svg class="w-5 h-5 {{ $confIcon }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
             </div>
-            <p class="text-4xl font-bold {{ $confColor }} mb-3">{{ round($stats['taux_conformite'], 1) }}%</p>
-            <div class="space-y-1 text-sm">
+            <p class="text-4xl font-bold {{ $confColor }} mb-1">{{ round($stats['taux_conformite'], 1) }}%</p>
+            <p class="text-xs text-gray-400 mb-3">{{ $stats['biens_presents'] }} conformes sur {{ $stats['total_biens_attendus'] }} attendus</p>
+            <div class="space-y-1.5 text-sm">
                 <div class="flex items-center justify-between">
                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-500"></span> Conformes</span>
                     <span class="font-medium text-gray-700">{{ $stats['biens_presents'] }}</span>
@@ -123,6 +124,12 @@
                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span> Absents</span>
                     <span class="font-medium text-gray-700">{{ $stats['biens_absents'] }}</span>
                 </div>
+                @if($stats['biens_non_verifies'] > 0)
+                    <div class="flex items-center justify-between pt-1 border-t border-gray-100">
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-gray-300"></span> Non vérifiés</span>
+                        <span class="font-medium text-gray-400">{{ $stats['biens_non_verifies'] }}</span>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -260,16 +267,63 @@
 
                     {{-- Biens défectueux --}}
                     @if(count($alertes['biens_defectueux'] ?? []) > 0)
-                        <div class="bg-white p-4">
-                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Défectueux</h4>
-                            <div class="flex flex-wrap gap-1.5">
-                                @foreach(array_slice($alertes['biens_defectueux'], 0, 6) as $alerte)
-                                    <span class="px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200" title="{{ $alerte['designation'] }}">{{ $alerte['code'] }}</span>
+                        <div class="bg-white p-4 sm:col-span-2 lg:col-span-3">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Défectueux ({{ count($alertes['biens_defectueux']) }})</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                @foreach(array_slice($alertes['biens_defectueux'], 0, 9) as $idx => $alerte)
+                                    <div x-data="{ showPhoto: false }" class="flex items-start gap-3 rounded-lg border border-orange-200 bg-orange-50/50 p-3">
+                                        {{-- Photo thumbnail ou icone --}}
+                                        @if(!empty($alerte['photo_url']))
+                                            <button @click="showPhoto = true" class="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border-2 border-orange-300 hover:border-orange-500 transition-colors cursor-pointer relative group">
+                                                <img src="{{ $alerte['photo_url'] }}" alt="Photo défaut" class="w-full h-full object-cover">
+                                                <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                    <svg class="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/></svg>
+                                                </div>
+                                            </button>
+
+                                            {{-- Modal photo plein ecran --}}
+                                            <div x-show="showPhoto" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showPhoto = false" @keydown.escape.window="showPhoto = false" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                                                <div @click.stop class="relative max-w-3xl max-h-[85vh] bg-white rounded-xl shadow-2xl overflow-hidden">
+                                                    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+                                                        <div>
+                                                            <p class="text-sm font-semibold text-gray-900">{{ $alerte['code'] }}</p>
+                                                            <p class="text-xs text-gray-500">{{ $alerte['designation'] }} &middot; {{ $alerte['localisation'] }}</p>
+                                                        </div>
+                                                        <button @click="showPhoto = false" class="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors">
+                                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                        </button>
+                                                    </div>
+                                                    <div class="p-2 bg-gray-100">
+                                                        <img src="{{ $alerte['photo_url'] }}" alt="Photo défaut {{ $alerte['code'] }}" class="max-h-[70vh] w-auto mx-auto rounded-lg">
+                                                    </div>
+                                                    @if(!empty($alerte['commentaire']))
+                                                        <div class="px-4 py-3 border-t border-gray-200">
+                                                            <p class="text-xs text-gray-500 uppercase font-medium mb-1">Commentaire</p>
+                                                            <p class="text-sm text-gray-700">{{ $alerte['commentaire'] }}</p>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @else
+                                            <div class="flex-shrink-0 w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center">
+                                                <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            </div>
+                                        @endif
+
+                                        {{-- Details --}}
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-xs font-mono font-semibold text-orange-800">{{ $alerte['code'] }}</span>
+                                            </div>
+                                            <p class="text-xs text-gray-600 truncate mt-0.5" title="{{ $alerte['designation'] }}">{{ $alerte['designation'] }}</p>
+                                            <p class="text-xs text-gray-400 mt-0.5">{{ $alerte['localisation'] }}</p>
+                                        </div>
+                                    </div>
                                 @endforeach
-                                @if(count($alertes['biens_defectueux']) > 6)
-                                    <span class="px-2 py-0.5 rounded text-xs text-gray-400">+{{ count($alertes['biens_defectueux']) - 6 }}</span>
-                                @endif
                             </div>
+                            @if(count($alertes['biens_defectueux']) > 9)
+                                <p class="text-xs text-gray-400 mt-2">+{{ count($alertes['biens_defectueux']) - 9 }} autre(s) non affichés</p>
+                            @endif
                         </div>
                     @endif
 
