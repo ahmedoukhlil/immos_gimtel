@@ -354,7 +354,6 @@ class DashboardInventaire extends Component
         
         $total += $this->inventaire->inventaireScans()
             ->where('statut_scan', 'absent')
-            ->whereHas('bien', fn($q) => $q->where('valeur_acquisition', '>', 100000))
             ->count();
         
         $total += $this->inventaire->inventaireScans()
