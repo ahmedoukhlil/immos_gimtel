@@ -187,14 +187,6 @@ class DashboardInventaire extends Component
     }
 
     /**
-     * Propriété calculée : Données pour le graphique progression par localisation
-     */
-    public function getLocalisationsGraphDataProperty()
-    {
-        return $this->inventaireLocalisations->take(10)->values();
-    }
-
-    /**
      * Propriété calculée : Données pour le graphique progression temporelle
      */
     public function getScansGraphDataProperty()
@@ -217,14 +209,14 @@ class DashboardInventaire extends Component
     }
 
     /**
-     * Propriété calculée : Retourne les 20 derniers scans
+     * Propriété calculée : Retourne les 5 derniers scans
      */
     public function getDerniersScansProperty()
     {
         return $this->inventaire->inventaireScans()
-            ->with(['gesimmo.designation', 'gesimmo.categorie', 'bien', 'localisationReelle', 'agent'])
+            ->with(['bien.designation', 'localisationReelle', 'agent'])
             ->orderBy('date_scan', 'desc')
-            ->limit(20)
+            ->limit(5)
             ->get();
     }
 
