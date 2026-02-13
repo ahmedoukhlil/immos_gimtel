@@ -167,14 +167,17 @@
                 LABEL_W_MM: 70,
                 LABEL_H_MM: 24.4,
                 COLS: 3,         // 3 × 70mm = 210mm = largeur A4
-                ROWS: 11,        // 11 × 24.4mm = 268.4mm → 33 étiquettes/page
+                MARGIN_TOP_MM: 7,    // marge haute 7mm
+                MARGIN_BOTTOM_MM: 7, // marge basse 7mm
 
-                get LABEL_W() { return this.LABEL_W_MM * this.MM; },  // 198.43 pts
-                get LABEL_H() { return this.LABEL_H_MM * this.MM; },  // 69.17 pts
-                get TOTAL()   { return this.COLS * this.ROWS; },       // 33 par page
-                // Marges de la grille sur la page A4
+                get LABEL_W() { return this.LABEL_W_MM * this.MM; },
+                get LABEL_H() { return this.LABEL_H_MM * this.MM; },
                 get MARGIN_LEFT() { return (this.A4_W - this.COLS * this.LABEL_W) / 2; },
-                get MARGIN_TOP()  { return 7 * this.MM; },  // marge haute fixe ~7mm
+                get MARGIN_TOP()  { return this.MARGIN_TOP_MM * this.MM; },
+                get MARGIN_BOTTOM() { return this.MARGIN_BOTTOM_MM * this.MM; },
+                // Nombre max de lignes = espace disponible / hauteur étiquette
+                get ROWS() { return Math.floor((this.A4_H - this.MARGIN_TOP - this.MARGIN_BOTTOM) / this.LABEL_H); },
+                get TOTAL() { return this.COLS * this.ROWS; },  // étiquettes par page
 
                 setStatus(type, text) { this.statusType = type; this.statusText = text; },
 

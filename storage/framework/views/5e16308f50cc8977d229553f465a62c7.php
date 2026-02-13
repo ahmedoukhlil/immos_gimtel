@@ -251,6 +251,19 @@
                                 let bcW = BC_HEIGHT * bcAR;
                                 if (bcW > maxBcW) bcW = maxBcW;
 
+                                // ── DEBUG : bordure de l'étiquette ──
+                                page.drawRectangle({
+                                    x: labelX, y: labelBottomY,
+                                    width: this.LABEL_W, height: this.LABEL_H,
+                                    borderColor: PDFLib.rgb(0.8, 0.8, 0.8),
+                                    borderWidth: 0.5, opacity: 0,
+                                });
+                                page.drawLine({
+                                    start: { x: labelX, y: labelTopY - this.LABEL_H / 2 },
+                                    end: { x: labelX + this.LABEL_W, y: labelTopY - this.LABEL_H / 2 },
+                                    color: PDFLib.rgb(1, 0, 0), thickness: 0.3,
+                                });
+
                                 // ── Dessiner le code-barres (position fixe) ──
                                 // En PDF : Y du bas de l'image = labelTopY - offset - hauteur
                                 const bcY = labelTopY - BC_TOP_OFFSET - BC_HEIGHT;
