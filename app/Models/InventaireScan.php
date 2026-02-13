@@ -6,8 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Storage;
-
 class InventaireScan extends Model
 {
     use HasFactory;
@@ -196,7 +194,7 @@ class InventaireScan extends Model
             return null;
         }
         $path = ltrim(str_replace('\\', '/', $this->photo_path), '/');
-        return Storage::disk('public')->url($path);
+        return '/storage/' . $path;
     }
 }
 
