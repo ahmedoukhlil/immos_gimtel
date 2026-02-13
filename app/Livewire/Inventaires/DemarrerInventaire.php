@@ -17,10 +17,10 @@ class DemarrerInventaire extends Component
     public $annee;
     public $date_debut;
     public $observation = '';
-    public $assignerLocalisations = true;
     public $localisationsSelectionnees = [];
     public $assignations = []; // [localisation_id => user_id]
     public $agentGlobalSelect = ''; // Pour le select global d'assignation
+    public $rechercheLocalisation = ''; // Filtre de recherche pour les localisations
 
     /**
      * Étape actuelle du wizard (1, 2, ou 3)
@@ -70,20 +70,19 @@ class DemarrerInventaire extends Component
     }
 
     /**
-     * Propriété calculée : Retourne toutes les localisations avec leurs emplacements et immobilisations
+     * Propriété calculée : Retourne toutes les localisations avec stats pré-calculées
+     * Évite les requêtes N+1 en pré-chargeant emplacements + immobilisations count
      */
     public function getLocalisationsProperty()
     {
         return LocalisationImmo::with(['emplacements' => function ($query) {
                 $query->withCount('immobilisations');
             }])
+            ->withCount('emplacements')
             ->orderBy('Localisation')
             ->get()
-            ->map(function ($localisation) {
-                // Compter le nombre total d'immobilisations via les emplacements
-                $localisation->biens_count = $localisation->emplacements
-                    ->sum('immobilisations_count');
-                return $localisation;
+            ->each(function ($localisation) {
+                $localisation->biens_count = $localisation->emplacements->sum('immobilisations_count');
             });
     }
 
@@ -137,6 +136,24 @@ class DemarrerInventaire extends Component
     }
 
     /**
+     * Propriété calculée : Retourne les localisations filtrées par la recherche
+     */
+    public function getLocalisationsFiltreesProperty()
+    {
+        $recherche = trim($this->rechercheLocalisation);
+
+        if (empty($recherche)) {
+            return $this->localisations;
+        }
+
+        return $this->localisations->filter(function ($loc) use ($recherche) {
+            $terme = mb_strtolower($recherche);
+            return str_contains(mb_strtolower($loc->Localisation ?? ''), $terme)
+                || str_contains(mb_strtolower($loc->CodeLocalisation ?? ''), $terme);
+        });
+    }
+
+    /**
      * Propriété calculée : Retourne le nombre total de localisations sélectionnées
      */
     public function getTotalLocalisationsProperty(): int
@@ -146,7 +163,7 @@ class DemarrerInventaire extends Component
 
     /**
      * Propriété calculée : Retourne le nombre total de biens attendus dans les localisations sélectionnées
-     * Compte via la hiérarchie : Localisation → Emplacements → Immobilisations
+     * Utilise les données pré-calculées de getLocalisationsProperty pour éviter des requêtes supplémentaires
      */
     public function getTotalBiensAttendusProperty(): int
     {
@@ -154,32 +171,9 @@ class DemarrerInventaire extends Component
             return 0;
         }
 
-        $total = 0;
-        foreach ($this->localisationsSelectionnees as $localisationId) {
-            $localisation = LocalisationImmo::find($localisationId);
-            if ($localisation) {
-                // Compter les immobilisations via les emplacements
-                $total += $localisation->emplacements()
-                    ->withCount('immobilisations')
-                    ->get()
-                    ->sum('immobilisations_count');
-            }
-        }
-        
-        return $total;
-    }
-
-    /**
-     * Propriété calculée : Retourne la valeur totale des biens dans les localisations sélectionnées
-     * Note: Cette méthode retourne 0 car les immobilisations (Gesimmo) n'ont pas de champ valeur_acquisition
-     * Si nécessaire, cette logique devra être adaptée selon la structure réelle de la table gesimmo
-     */
-    public function getValeurTotaleProperty(): float
-    {
-        // Les immobilisations sont dans la table gesimmo et sont liées via emplacement
-        // Si vous avez besoin de calculer une valeur, il faudra adapter cette méthode
-        // selon les colonnes disponibles dans la table gesimmo
-        return 0.0;
+        return $this->localisations
+            ->whereIn('idLocalisation', $this->localisationsSelectionnees)
+            ->sum('biens_count');
     }
 
     /**
@@ -370,17 +364,13 @@ class DemarrerInventaire extends Component
                 'observation' => $validated['observation'] ?? null,
             ]);
 
-            // Créer les InventaireLocalisation pour chaque localisation sélectionnée
+            // Créer les InventaireLocalisation en utilisant les données pré-calculées
+            $localisationsMap = $this->localisations->keyBy('idLocalisation');
+
             foreach ($this->localisationsSelectionnees as $localisationId) {
-                $localisation = LocalisationImmo::find($localisationId);
+                $localisation = $localisationsMap->get($localisationId);
                 
                 if ($localisation) {
-                    // Compter les immobilisations via les emplacements
-                    $nombreBiensAttendus = $localisation->emplacements()
-                        ->withCount('immobilisations')
-                        ->get()
-                        ->sum('immobilisations_count');
-                    
                     $userId = $this->assignations[$localisationId] ?? null;
 
                     InventaireLocalisation::create([
@@ -388,7 +378,7 @@ class DemarrerInventaire extends Component
                         'localisation_id' => $localisationId,
                         'statut' => 'en_attente',
                         'user_id' => $userId,
-                        'nombre_biens_attendus' => $nombreBiensAttendus,
+                        'nombre_biens_attendus' => $localisation->biens_count ?? 0,
                         'nombre_biens_scannes' => 0,
                     ]);
                 }
