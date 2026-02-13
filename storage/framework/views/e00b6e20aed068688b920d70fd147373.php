@@ -29,8 +29,8 @@
             <ul class="space-y-0.5 sm:space-y-1">
                 <!-- Dashboard -->
                 <li>
-                    <a href="{{ route('dashboard') }}" 
-                       class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('dashboard') ? 'bg-gray-700 text-white' : '' }}">
+                    <a href="<?php echo e(route('dashboard')); ?>" 
+                       class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors <?php echo e(request()->routeIs('dashboard') ? 'bg-gray-700 text-white' : ''); ?>">
                         <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                         </svg>
@@ -38,12 +38,12 @@
                     </a>
                 </li>
 
-                @auth
-                    @if(auth()->user()->role === 'admin' || auth()->user()->role === 'agent')
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(auth()->guard()->check()): ?>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(auth()->user()->role === 'admin' || auth()->user()->role === 'agent'): ?>
                         <!-- Localisations -->
                         <li>
-                            <a href="{{ route('localisations.index') }}" 
-                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('localisations.*') ? 'bg-gray-700 text-white' : '' }}">
+                            <a href="<?php echo e(route('localisations.index')); ?>" 
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors <?php echo e(request()->routeIs('localisations.*') ? 'bg-gray-700 text-white' : ''); ?>">
                                 <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -54,8 +54,8 @@
 
                         <!-- Biens -->
                         <li>
-                            <a href="{{ route('biens.index') }}" 
-                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('biens.*') ? 'bg-gray-700 text-white' : '' }}">
+                            <a href="<?php echo e(route('biens.index')); ?>" 
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors <?php echo e(request()->routeIs('biens.*') ? 'bg-gray-700 text-white' : ''); ?>">
                                 <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                                 </svg>
@@ -65,8 +65,8 @@
 
                         <!-- Inventaires -->
                         <li>
-                            <a href="{{ route('inventaires.index') }}" 
-                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('inventaires.*') ? 'bg-gray-700 text-white' : '' }}">
+                            <a href="<?php echo e(route('inventaires.index')); ?>" 
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors <?php echo e(request()->routeIs('inventaires.*') ? 'bg-gray-700 text-white' : ''); ?>">
                                 <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                                 </svg>
@@ -74,23 +74,15 @@
                             </a>
                         </li>
 
-                        {{-- Rapports - Désactivé pour l'instant (route non définie) --}}
-                        {{-- <li>
-                            <a href="{{ route('rapports.index') }}" 
-                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('rapports.*') ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                </svg>
-                                <span class="truncate">Rapports</span>
-                            </a>
-                        </li> --}}
-                    @endif
+                        
+                        
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
-                    @if(auth()->user()->role === 'admin')
+                    <?php if(auth()->user()->role === 'admin'): ?>
                         <!-- Utilisateurs -->
                         <li>
-                            <a href="{{ route('users.index') }}" 
-                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('users.*') ? 'bg-gray-700 text-white' : '' }}">
+                            <a href="<?php echo e(route('users.index')); ?>" 
+                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors <?php echo e(request()->routeIs('users.*') ? 'bg-gray-700 text-white' : ''); ?>">
                                 <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                 </svg>
@@ -98,19 +90,10 @@
                             </a>
                         </li>
 
-                        {{-- Paramètres - Désactivé pour l'instant (route non définie) --}}
-                        {{-- <li>
-                            <a href="{{ route('settings.index') }}" 
-                               class="flex items-center px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('settings.*') ? 'bg-gray-700 text-white' : '' }}">
-                                <svg class="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                </svg>
-                                <span class="truncate">Paramètres</span>
-                            </a>
-                        </li> --}}
-                    @endif
-                @endauth
+                        
+                        
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
             </ul>
         </nav>
 
@@ -153,34 +136,35 @@
 
                 <!-- Breadcrumb Desktop -->
                 <nav class="hidden lg:flex items-center space-x-2 text-sm text-gray-500 flex-shrink-0">
-                    <a href="{{ route('dashboard') }}" class="hover:text-gray-700 whitespace-nowrap">Dashboard</a>
-                    @if(isset($breadcrumbs))
-                        @foreach($breadcrumbs as $breadcrumb)
+                    <a href="<?php echo e(route('dashboard')); ?>" class="hover:text-gray-700 whitespace-nowrap">Dashboard</a>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($breadcrumbs)): ?>
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__currentLoopData = $breadcrumbs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $breadcrumb): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <span>/</span>
-                            <a href="{{ $breadcrumb['url'] ?? '#' }}" class="hover:text-gray-700 whitespace-nowrap">{{ $breadcrumb['label'] }}</a>
-                        @endforeach
-                    @endif
+                            <a href="<?php echo e($breadcrumb['url'] ?? '#'); ?>" class="hover:text-gray-700 whitespace-nowrap"><?php echo e($breadcrumb['label']); ?></a>
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </nav>
 
                 <!-- Breadcrumb Mobile/Tablet - Version compacte -->
                 <nav class="lg:hidden flex items-center space-x-1 text-xs sm:text-sm text-gray-500 min-w-0 overflow-hidden">
-                    @if(isset($breadcrumbs) && count($breadcrumbs) > 0)
-                        @php
+                    <?php if(isset($breadcrumbs) && count($breadcrumbs) > 0): ?>
+                        <?php
                             $lastBreadcrumb = end($breadcrumbs);
                             reset($breadcrumbs);
-                        @endphp
-                        <a href="{{ $lastBreadcrumb['url'] ?? route('dashboard') }}" class="hover:text-gray-700 truncate">
-                            {{ $lastBreadcrumb['label'] ?? 'Dashboard' }}
+                        ?>
+                        <a href="<?php echo e($lastBreadcrumb['url'] ?? route('dashboard')); ?>" class="hover:text-gray-700 truncate">
+                            <?php echo e($lastBreadcrumb['label'] ?? 'Dashboard'); ?>
+
                         </a>
-                    @else
-                        <a href="{{ route('dashboard') }}" class="hover:text-gray-700 truncate">Dashboard</a>
-                    @endif
+                    <?php else: ?>
+                        <a href="<?php echo e(route('dashboard')); ?>" class="hover:text-gray-700 truncate">Dashboard</a>
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </nav>
             </div>
 
             <!-- Right: Notifications + Profile -->
             <div class="flex items-center space-x-2 sm:space-x-3 md:space-x-4 flex-shrink-0">
-                @auth
+                <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(auth()->guard()->check()): ?>
                     <!-- Notifications -->
                     <button class="relative p-1.5 sm:p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
                         <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -197,13 +181,15 @@
                         >
                             <div class="flex items-center space-x-1 sm:space-x-2">
                                 <div class="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-xs sm:text-sm flex-shrink-0">
-                                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                                    <?php echo e(strtoupper(substr(auth()->user()->name, 0, 1))); ?>
+
                                 </div>
                                 <div class="hidden sm:block text-left">
-                                    <div class="text-xs sm:text-sm font-medium text-gray-900 leading-tight">{{ auth()->user()->name }}</div>
+                                    <div class="text-xs sm:text-sm font-medium text-gray-900 leading-tight"><?php echo e(auth()->user()->name); ?></div>
                                     <div class="text-xs text-gray-500 mt-0.5">
-                                        <span class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium {{ auth()->user()->role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800' }}">
-                                            {{ auth()->user()->role_name }}
+                                        <span class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium <?php echo e(auth()->user()->role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'); ?>">
+                                            <?php echo e(auth()->user()->role_name); ?>
+
                                         </span>
                                     </div>
                                 </div>
@@ -229,30 +215,32 @@
                             <a href="#" class="block px-3 sm:px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Mon profil</a>
                             <a href="#" class="block px-3 sm:px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Paramètres</a>
                             <hr class="my-1">
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
+                            <form method="POST" action="<?php echo e(route('logout')); ?>">
+                                <?php echo csrf_field(); ?>
                                 <button type="submit" class="w-full text-left block px-3 sm:px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                     Déconnexion
                                 </button>
                             </form>
                         </div>
                     </div>
-                @endauth
+                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
             </div>
         </header>
 
         <!-- Page Content -->
         <main class="flex-1 overflow-y-auto bg-gray-50">
             <!-- Page Header -->
-            @if (isset($header))
+            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($header)): ?>
                 <div class="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-                    {{ $header }}
+                    <?php echo e($header); ?>
+
                 </div>
-            @endif
+            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
             <!-- Main Content -->
             <div class="p-3 sm:p-4 md:p-6">
-                {{ $slot }}
+                <?php echo e($slot); ?>
+
             </div>
 
             <!-- Footer -->
@@ -316,18 +304,18 @@
             toasts: [],
             init() {
                 // Écouter les messages flash de session
-                @if(session('success'))
-                    this.add('{{ session('success') }}', 'success');
-                @endif
-                @if(session('error'))
-                    this.add('{{ session('error') }}', 'error');
-                @endif
-                @if(session('info'))
-                    this.add('{{ session('info') }}', 'info');
-                @endif
-                @if(session('warning'))
-                    this.add('{{ session('warning') }}', 'warning');
-                @endif
+                <?php if(session('success')): ?>
+                    this.add('<?php echo e(session('success')); ?>', 'success');
+                <?php endif; ?>
+                <?php if(session('error')): ?>
+                    this.add('<?php echo e(session('error')); ?>', 'error');
+                <?php endif; ?>
+                <?php if(session('info')): ?>
+                    this.add('<?php echo e(session('info')); ?>', 'info');
+                <?php endif; ?>
+                <?php if(session('warning')): ?>
+                    this.add('<?php echo e(session('warning')); ?>', 'warning');
+                <?php endif; ?>
             },
             add(message, type = 'info') {
                 const toast = {
@@ -352,5 +340,7 @@
     }
 </script>
 
-@livewireScripts
+<?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::scripts(); ?>
 
+
+<?php /**PATH C:\xampp\htdocs\gesimmos\resources\views/layouts/app-content.blade.php ENDPATH**/ ?>

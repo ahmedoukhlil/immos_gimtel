@@ -101,7 +101,9 @@ class ListeBiens extends Component
         
         return cache()->remember($cacheKey, 300, function () {
             return Affectation::select('idAffectation', 'Affectation', 'CodeAffectation', 'idLocalisation')
-                ->where('idLocalisation', $this->filterLocalisation)
+                ->whereHas('emplacements', function ($query) {
+                    $query->where('idLocalisation', $this->filterLocalisation);
+                })
                 ->orderBy('Affectation')
                 ->get();
         });
@@ -469,6 +471,7 @@ class ListeBiens extends Component
             'categorie',
             'etat',
             'emplacement.localisation',
+            'emplacement.affectation',
             'natureJuridique',
             'sourceFinancement'
         ]);
