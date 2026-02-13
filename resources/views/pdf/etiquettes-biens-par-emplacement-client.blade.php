@@ -159,18 +159,22 @@
                 progressPercent: 0,
                 pdfBlobUrl: null,
 
-                A4_W: 595.28, A4_H: 841.89,
-                MARGIN: 28.35,
-                COLS: 3, ROWS: 11,
-                GAP: 8.5,
-                BC_H: 35,
+                // ── Dimensions fixes : étiquettes 70mm × 24.4mm ──
+                // 1 mm = 2.83465 pts
+                MM: 2.83465,
+                A4_W: 595.28,    // 210mm
+                A4_H: 841.89,    // 297mm
+                LABEL_W_MM: 70,
+                LABEL_H_MM: 24.4,
+                COLS: 3,         // 3 × 70mm = 210mm = largeur A4
+                ROWS: 11,        // 11 × 24.4mm = 268.4mm → 33 étiquettes/page
 
-                get TOTAL() { return this.COLS * this.ROWS; },
-                get USABLE_W() { return this.A4_W - this.MARGIN * 2; },
-                get USABLE_H() { return this.A4_H - this.MARGIN * 2; },
-                get LABEL_W() { return (this.USABLE_W - this.GAP * (this.COLS - 1)) / this.COLS; },
-                get LABEL_H() { return (this.USABLE_H - this.GAP * (this.ROWS - 1)) / this.ROWS; },
-                get BC_W() { return this.LABEL_W - 8; },
+                get LABEL_W() { return this.LABEL_W_MM * this.MM; },  // 198.43 pts
+                get LABEL_H() { return this.LABEL_H_MM * this.MM; },  // 69.17 pts
+                get TOTAL()   { return this.COLS * this.ROWS; },       // 33 par page
+                // Marges de la grille sur la page A4
+                get MARGIN_LEFT() { return (this.A4_W - this.COLS * this.LABEL_W) / 2; },
+                get MARGIN_TOP()  { return 7 * this.MM; },  // marge haute fixe ~7mm
 
                 setStatus(type, text) { this.statusType = type; this.statusText = text; },
 
@@ -187,6 +191,23 @@
                         const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
                         const pages = Math.ceil(this.biensData.length / this.TOTAL);
 
+                        // ── Positions fixes en mm depuis le HAUT de chaque étiquette ──
+                        // Étiquette = 24.4mm de haut, centre à 12.2mm
+                        // Layout vertical centré (~4mm padding haut/bas) :
+                        //   4.0mm  → haut du code-barres
+                        //   12.0mm → bas du code-barres (barcode = 8mm)
+                        //   15.5mm → baseline du code formaté (taille 7)
+                        //   19.0mm → baseline de la désignation (taille 5)
+                        //   ~20.5mm → fin visuelle du contenu
+                        //   24.4mm → bas de l'étiquette
+                        const mm = this.MM;
+                        const BC_TOP_OFFSET  = 4.0 * mm;   // 4mm depuis le haut
+                        const BC_HEIGHT      = 8.0 * mm;   // hauteur code-barres 8mm
+                        const CODE_Y_OFFSET  = 15.5 * mm;  // baseline code à 15.5mm du haut (3.5mm sous barcode)
+                        const DESIG_Y_OFFSET = 19.0 * mm;  // baseline désignation à 19mm du haut
+                        const FS_CODE = 7;
+                        const FS_DESIG = 5;
+
                         for (let pi = 0; pi < pages; pi++) {
                             const page = pdfDoc.addPage([this.A4_W, this.A4_H]);
                             const start = pi * this.TOTAL;
@@ -201,38 +222,63 @@
 
                                 const col = i % this.COLS;
                                 const row = Math.floor(i / this.COLS);
-                                const x = this.MARGIN + col * (this.LABEL_W + this.GAP);
-                                const y = this.A4_H - this.MARGIN - (row + 1) * this.LABEL_H - row * this.GAP;
 
+                                // ── Coin supérieur gauche de l'étiquette ──
+                                const labelX = this.MARGIN_LEFT + col * this.LABEL_W;
+                                const labelTopY = this.A4_H - this.MARGIN_TOP - row * this.LABEL_H;
+                                const labelBottomY = labelTopY - this.LABEL_H;
+
+                                // ── Générer le code-barres ──
                                 const canvas = document.createElement('canvas');
                                 canvas.style.cssText = 'position:absolute;left:-9999px';
                                 document.body.appendChild(canvas);
-                                JsBarcode(canvas, val, { format: 'CODE128', width: 1.5, height: this.BC_H, displayValue: false, background: '#fff', lineColor: '#000', margin: 0 });
+                                JsBarcode(canvas, val, {
+                                    format: 'CODE128', width: 1.5, height: 50,
+                                    displayValue: false, background: '#fff',
+                                    lineColor: '#000', margin: 0
+                                });
                                 await new Promise(r => setTimeout(r, 30));
                                 const img = await pdfDoc.embedPng(canvas.toDataURL('image/png'));
                                 document.body.removeChild(canvas);
 
-                                const ar = img.width / img.height;
-                                let bw = this.BC_W, bh = this.BC_W / ar;
-                                if (bh > this.BC_H) { bh = this.BC_H; bw = this.BC_H * ar; }
-                                const textH = 15, availH = this.LABEL_H - textH - 4;
-                                const bx = x + (this.LABEL_W - bw) / 2;
-                                const by = y + availH - bh + 2;
+                                // ── Dimensions du code-barres ──
+                                const bcAR = img.width / img.height;
+                                const maxBcW = this.LABEL_W * 0.88;
+                                let bcW = BC_HEIGHT * bcAR;
+                                if (bcW > maxBcW) bcW = maxBcW;
 
-                                page.drawImage(img, { x: bx, y: by, width: bw, height: bh });
+                                // ── Dessiner le code-barres (position fixe) ──
+                                // En PDF : Y du bas de l'image = labelTopY - offset - hauteur
+                                const bcY = labelTopY - BC_TOP_OFFSET - BC_HEIGHT;
+                                const bcX = labelX + (this.LABEL_W - bcW) / 2;
+                                page.drawImage(img, { x: bcX, y: bcY, width: bcW, height: BC_HEIGHT });
 
-                                let cy = by - 8;
+                                // ── Code formaté (position fixe) ──
                                 if (code) {
-                                    const fs = 7, tw = font.widthOfTextAtSize(code, fs);
-                                    page.drawText(code, { x: x + (this.LABEL_W - tw) / 2, y: cy, size: fs, font, color: PDFLib.rgb(0, 0, 0) });
-                                    cy -= fs + 3;
+                                    const tw = font.widthOfTextAtSize(code, FS_CODE);
+                                    page.drawText(code, {
+                                        x: labelX + (this.LABEL_W - tw) / 2,
+                                        y: labelTopY - CODE_Y_OFFSET,
+                                        size: FS_CODE, font,
+                                        color: PDFLib.rgb(0, 0, 0)
+                                    });
                                 }
+
+                                // ── Désignation (position fixe) ──
                                 if (desig) {
-                                    const fs = 5, maxW = this.LABEL_W - 4;
+                                    const maxTxtW = this.LABEL_W * 0.92;
                                     let txt = desig;
-                                    while (font.widthOfTextAtSize(txt, fs) > maxW && txt.length > 0) txt = txt.slice(0, -1);
-                                    const tw = font.widthOfTextAtSize(txt, fs);
-                                    page.drawText(txt, { x: x + (this.LABEL_W - tw) / 2, y: cy, size: fs, font, color: PDFLib.rgb(0, 0, 0) });
+                                    while (font.widthOfTextAtSize(txt, FS_DESIG) > maxTxtW && txt.length > 0) {
+                                        txt = txt.slice(0, -1);
+                                    }
+                                    if (txt.length < desig.length) txt += '…';
+                                    const tw = font.widthOfTextAtSize(txt, FS_DESIG);
+                                    page.drawText(txt, {
+                                        x: labelX + (this.LABEL_W - tw) / 2,
+                                        y: labelTopY - DESIG_Y_OFFSET,
+                                        size: FS_DESIG, font,
+                                        color: PDFLib.rgb(0, 0, 0)
+                                    });
                                 }
 
                                 this.progressCurrent = start + i + 1;
