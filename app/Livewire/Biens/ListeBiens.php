@@ -220,7 +220,7 @@ class ListeBiens extends Component
             $this->filterLocalisation,
             $this->filterAffectation,
             300, // cache 5 minutes
-            true  // avec détails hiérarchiques
+            false // nom de l'emplacement uniquement
         );
         
         return array_merge($options, $emplacements);

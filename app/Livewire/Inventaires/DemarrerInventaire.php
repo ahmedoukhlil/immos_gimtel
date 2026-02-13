@@ -41,8 +41,8 @@ class DemarrerInventaire extends Component
             return;
         }
 
-        // Initialiser les valeurs par défaut
-        $this->annee = date('Y');
+        // Initialiser les valeurs par défaut (l'inventaire porte sur l'année n-1)
+        $this->annee = date('Y') - 1;
         $this->date_debut = now()->format('Y-m-d');
 
         // Pré-sélectionner toutes les localisations actives
@@ -58,8 +58,8 @@ class DemarrerInventaire extends Component
         $anneeActuelle = (int) date('Y');
         $anneesDisponibles = [];
 
-        // Générer les 5 prochaines années à partir de l'année actuelle
-        for ($i = 0; $i < 5; $i++) {
+        // Générer les années de n-3 à n+1 (l'inventaire porte généralement sur l'année n-1)
+        for ($i = -3; $i <= 1; $i++) {
             $annee = $anneeActuelle + $i;
             if (!in_array($annee, $anneesUtilisees)) {
                 $anneesDisponibles[] = $annee;
