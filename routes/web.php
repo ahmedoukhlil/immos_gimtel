@@ -12,10 +12,10 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Redirection de la page d'accueil vers le login
-Route::get('/', function () {
-    return redirect()->route('login');
-});
+// La page d'accueil affiche directement le formulaire de login
+Route::get('/', [App\Http\Controllers\Auth\AuthenticatedSessionController::class, 'create'])
+    ->middleware('guest')
+    ->name('home');
 
 /*
 |--------------------------------------------------------------------------

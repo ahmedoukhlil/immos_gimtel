@@ -37,9 +37,8 @@
     <link rel="manifest" href="{{ asset('manifest.json') }}">
     
     {{-- PWA Icons --}}
-    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('images/icons/icon-192x192.png') }}">
-    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/icons/icon-512x512.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('images/icons/icon-192x192.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('gimtel_inventaire.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('gimtel_inventaire.png') }}">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

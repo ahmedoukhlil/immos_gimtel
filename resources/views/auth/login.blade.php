@@ -3,7 +3,7 @@
         <div class="flex flex-col items-center mb-8 animate-fade-in">
             <div class="w-24 h-24 mb-4 transform hover:scale-105 transition-transform">
                 <img 
-                    src="{{ asset('logo_gimtel.png') }}" 
+                    src="{{ asset('gimtel_inventaire.png') }}" 
                     alt="{{ config('app.name', 'Immos GIMTEL') }}"
                     class="w-full h-full object-contain drop-shadow-lg">
             </div>
