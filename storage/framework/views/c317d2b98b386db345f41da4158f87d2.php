@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
-    <title><?php echo e(config('app.name', 'Inventaire Pro')); ?> - Connexion</title>
+    <title><?php echo e(config('app.name', 'Immos GIMTEL')); ?> - Connexion</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -75,4 +75,4 @@
 </body>
 </html>
 
-<?php /**PATH C:\xampp\htdocs\gesimmos\resources\views/components/guest-layout.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\immos_gimtel\resources\views/components/guest-layout.blade.php ENDPATH**/ ?>

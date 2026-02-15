@@ -1,7 +1,7 @@
 {
-  "name": "Inventaire Pro - Scanner v2",
+  "name": "Immos GIMTEL - Scanner v2",
   "short_name": "Scanner v2",
-  "description": "Application de scan par emplacement pour inventaire immobilier",
+  "description": "Immos GIMTEL - Scanner par emplacement pour immobilisations",
   "start_url": "/pwa/index-v2.html",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Inventaire Pro'),
+    'name' => env('APP_NAME', 'Immos GIMTEL'),
 
     /*
     |--------------------------------------------------------------------------

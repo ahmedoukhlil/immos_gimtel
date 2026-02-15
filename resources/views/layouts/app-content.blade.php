@@ -14,8 +14,10 @@
         <!-- Logo -->
         <div class="flex items-center justify-between h-14 sm:h-16 px-4 sm:px-6 bg-gray-900 border-b border-gray-700">
             <div class="flex items-center space-x-2 min-w-0">
-                <span class="text-xl sm:text-2xl flex-shrink-0">📦</span>
-                <span class="font-bold text-base sm:text-lg truncate">Inventaire Pro</span>
+                <div class="flex flex-col leading-tight min-w-0">
+                    <span class="font-bold text-base sm:text-lg truncate">Immos GIMTEL</span>
+                    <span class="text-[9px] sm:text-[10px] text-gray-400 uppercase tracking-wider">Immobilisations</span>
+                </div>
             </div>
             <button @click="sidebarOpen = false" class="md:hidden text-gray-400 hover:text-white p-1 flex-shrink-0">
                 <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,7 +259,7 @@
 
             <!-- Footer -->
             <footer class="bg-white border-t border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 mt-auto">
-                <p class="text-xs sm:text-sm text-gray-500 text-center">© 2025 Inventaire Pro</p>
+                <p class="text-xs sm:text-sm text-gray-500 text-center">© 2025 Immos GIMTEL</p>
             </footer>
         </main>
     </div>

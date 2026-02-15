@@ -565,4 +565,4 @@
         });
     </script>
 </div>
-<?php /**PATH C:\xampp\htdocs\gesimmos\resources\views/livewire/dashboard.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\immos_gimtel\resources\views/livewire/dashboard.blade.php ENDPATH**/ ?>

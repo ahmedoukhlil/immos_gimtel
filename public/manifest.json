@@ -1,7 +1,7 @@
 {
-  "name": "Inventaire Pro",
-  "short_name": "Inventaire Pro",
-  "description": "Application de gestion d'inventaire professionnelle",
+  "name": "Immos GIMTEL",
+  "short_name": "Immos GIMTEL",
+  "description": "Immos GIMTEL - Gestion des immobilisations",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

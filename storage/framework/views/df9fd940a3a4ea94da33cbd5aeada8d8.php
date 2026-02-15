@@ -27,9 +27,9 @@
     <meta name="theme-color" content="#4F46E5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Inventaire Pro">
+    <meta name="apple-mobile-web-app-title" content="Immos GIMTEL">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="description" content="Application de gestion d'inventaire professionnelle">
+    <meta name="description" content="Immos GIMTEL - Gestion des immobilisations">
 
     <title><?php echo e(config('app.name', 'Inventaire Pro')); ?> - <?php echo $__env->yieldContent('title', 'Dashboard'); ?></title>
     
@@ -74,8 +74,10 @@
             <!-- Logo -->
             <div class="flex items-center justify-between h-16 px-6 bg-gray-900 border-b border-gray-700">
                 <div class="flex items-center space-x-2">
-                    <span class="text-2xl">📦</span>
-                    <span class="font-bold text-lg">Inventaire Pro</span>
+                    <div class="flex flex-col leading-tight">
+                        <span class="font-bold text-lg">Immos GIMTEL</span>
+                        <span class="text-[10px] text-gray-400 uppercase tracking-wider">Immobilisations</span>
+                    </div>
                 </div>
                 <button @click="sidebarOpen = false" class="md:hidden text-gray-400 hover:text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,7 +447,7 @@
 
                 <!-- Footer -->
                 <footer class="bg-white border-t border-gray-200 px-4 md:px-6 py-4 mt-auto">
-                    <p class="text-sm text-gray-500 text-center">© 2025 Inventaire Pro</p>
+                    <p class="text-sm text-gray-500 text-center">© 2025 Immos GIMTEL</p>
                 </footer>
             </main>
         </div>
@@ -474,4 +476,4 @@
 </body>
 </html>
 
-<?php /**PATH C:\xampp\htdocs\gesimmos\resources\views/components/layouts/app.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\xampp\htdocs\immos_gimtel\resources\views/components/layouts/app.blade.php ENDPATH**/ ?>
