@@ -26,7 +26,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,
             'inventory' => \App\Http\Middleware\CanManageInventaire::class,
-            'stock' => \App\Http\Middleware\CanManageStock::class,
             'session.timeout' => \App\Http\Middleware\CheckSessionTimeout::class,
         ]);
     })

@@ -241,55 +241,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Vérifie si l'utilisateur peut accéder au module Stock
-     * Admin, Admin_stock et Agent peuvent accéder au module Stock
-     */
-    public function canAccessStock(): bool
-    {
-        return in_array($this->role, ['admin', 'admin_stock', 'agent']);
-    }
-
-    /**
-     * MÉTHODES POUR LA GESTION DE STOCK
-     */
-
-    /**
-     * Vérifie si l'utilisateur peut gérer le stock (CRUD références)
-     * Admin et Admin_stock peuvent gérer les magasins, catégories, fournisseurs, demandeurs
-     */
-    public function canManageStock(): bool
-    {
-        return $this->isAdmin() || $this->isAdminStock();
-    }
-
-    /**
-     * Vérifie si l'utilisateur peut créer des entrées de stock
-     * Admin et Admin_stock peuvent créer des entrées
-     */
-    public function canCreateEntree(): bool
-    {
-        return $this->isAdmin() || $this->isAdminStock();
-    }
-
-    /**
-     * Vérifie si l'utilisateur peut créer des sorties de stock
-     * Admin, Admin_stock et Agent peuvent créer des sorties
-     */
-    public function canCreateSortie(): bool
-    {
-        return $this->isAdmin() || $this->isAdminStock() || $this->isAgent();
-    }
-
-    /**
-     * Vérifie si l'utilisateur peut voir tous les mouvements de stock
-     * Admin et Admin_stock voient tout, Agent voit seulement ses propres mouvements
-     */
-    public function canViewAllMovements(): bool
-    {
-        return $this->isAdmin() || $this->isAdminStock();
-    }
-
-    /**
      * Trouve un utilisateur par son nom d'utilisateur
      * Gère automatiquement les différences de structure entre environnements
      * 
