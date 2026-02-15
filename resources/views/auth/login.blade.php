@@ -1,16 +1,12 @@
 <x-guest-layout>
     <x-slot name="logo">
         <div class="flex flex-col items-center mb-8 animate-fade-in">
-            <div class="w-24 h-24 mb-4 transform hover:scale-105 transition-transform">
+            <div class="w-44 h-44 mb-2 transform hover:scale-105 transition-transform">
                 <img 
                     src="{{ asset('gimtel_inventaire.png') }}" 
                     alt="{{ config('app.name', 'Immos GIMTEL') }}"
                     class="w-full h-full object-contain drop-shadow-lg">
             </div>
-            <h1 class="text-3xl font-bold text-indigo-700">
-                {{ config('app.name', 'Immos GIMTEL') }}
-            </h1>
-            <p class="text-sm text-gray-700 font-medium mt-2 uppercase tracking-wide">Immobilisations</p>
         </div>
     </x-slot>
 
