@@ -157,12 +157,6 @@ class ListeInventaires extends Component
             return;
         }
 
-        // Ne pas supprimer un inventaire en cours (travail en cours)
-        if ($inventaire->statut === 'en_cours') {
-            session()->flash('error', 'Impossible de supprimer un inventaire en cours. Terminez-le ou clôturez-le d\'abord.');
-            return;
-        }
-
         try {
             // Cascade delete : les scans et localisations seront supprimés automatiquement
             $inventaire->delete();
