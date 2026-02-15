@@ -579,14 +579,14 @@
                         datasets: [{
                             label: 'Cumul des scans',
                             data: cumulatif,
-                            borderColor: '#4f46e5',
+                            borderColor: '#383f7b',
                             backgroundColor: 'rgba(79, 70, 229, 0.08)',
                             borderWidth: 2.5,
                             tension: 0.3,
                             fill: true,
                             pointRadius: dates.length > 20 ? 0 : 3,
                             pointHoverRadius: 5,
-                            pointBackgroundColor: '#4f46e5',
+                            pointBackgroundColor: '#383f7b',
                             pointBorderColor: '#fff',
                             pointBorderWidth: 2,
                         }, {

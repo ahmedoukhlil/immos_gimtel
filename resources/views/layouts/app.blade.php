@@ -24,7 +24,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
     {{-- PWA Meta Tags --}}
-    <meta name="theme-color" content="#4F46E5">
+    <meta name="theme-color" content="#383f7b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Immos GIMTEL">
@@ -56,7 +56,7 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="font-sans antialiased bg-gray-50">
+<body class="font-sans antialiased bg-secondary-50">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside 
@@ -67,11 +67,11 @@
             x-transition:leave="transition ease-in duration-300"
             x-transition:leave-start="translate-x-0"
             x-transition:leave-end="-translate-x-full"
-            class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-gray-800 text-white flex flex-col"
+            class="fixed md:static inset-y-0 left-0 z-50 w-64 bg-indigo-800 text-white flex flex-col"
             :class="{ 'translate-x-0': isDesktop || sidebarOpen }"
         >
             <!-- Logo -->
-            <div class="flex items-center justify-between h-16 px-6 bg-gray-900 border-b border-gray-700">
+            <div class="flex items-center justify-between h-16 px-6 bg-indigo-900 border-b border-indigo-700">
                 <div class="flex items-center space-x-2">
                     <div class="flex flex-col leading-tight">
                         <span class="font-bold text-lg">Immos GIMTEL</span>
@@ -91,7 +91,7 @@
                     <!-- Dashboard -->
                     <li>
                         <a href="{{ route('dashboard') }}" 
-                           class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('dashboard') ? 'bg-gray-700 text-white' : '' }}">
+                           class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('dashboard') ? 'bg-indigo-700 text-white' : '' }}">
                             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                             </svg>
@@ -104,7 +104,7 @@
                             <!-- Localisations -->
                             <li>
                                 <a href="{{ route('localisations.index') }}" 
-                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('localisations.*') ? 'bg-gray-700 text-white' : '' }}">
+                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('localisations.*') ? 'bg-indigo-700 text-white' : '' }}">
                                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -116,7 +116,7 @@
                             <!-- Emplacements -->
                             <li>
                                 <a href="{{ route('emplacements.index') }}" 
-                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('emplacements.*') ? 'bg-gray-700 text-white' : '' }}">
+                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('emplacements.*') ? 'bg-indigo-700 text-white' : '' }}">
                                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -128,7 +128,7 @@
                             <!-- Affectations -->
                             <li>
                                 <a href="{{ route('affectations.index') }}" 
-                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('affectations.*') ? 'bg-gray-700 text-white' : '' }}">
+                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('affectations.*') ? 'bg-indigo-700 text-white' : '' }}">
                                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                                     </svg>
@@ -139,7 +139,7 @@
                             <!-- Immobilisations -->
                             <li>
                                 <a href="{{ route('biens.index') }}" 
-                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('biens.index') || request()->routeIs('biens.show') ? 'bg-gray-700 text-white' : '' }}">
+                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('biens.index') || request()->routeIs('biens.show') ? 'bg-indigo-700 text-white' : '' }}">
                                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                                     </svg>
@@ -150,7 +150,7 @@
                             <!-- Ajouter Immobilisation -->
                             <li>
                                 <a href="{{ route('biens.create') }}" 
-                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('biens.create') || request()->routeIs('biens.edit') ? 'bg-gray-700 text-white' : '' }}">
+                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('biens.create') || request()->routeIs('biens.edit') ? 'bg-indigo-700 text-white' : '' }}">
                                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                                     </svg>
@@ -161,7 +161,7 @@
                             <!-- Inventaires -->
                             <li>
                                 <a href="{{ route('inventaires.index') }}" 
-                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('inventaires.*') ? 'bg-gray-700 text-white' : '' }}">
+                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('inventaires.*') ? 'bg-indigo-700 text-white' : '' }}">
                                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                                     </svg>
@@ -173,7 +173,7 @@
                         {{-- Rapports - Désactivé pour l'instant (route commentée) --}}
                         {{-- <li>
                             <a href="{{ route('rapports.index') }}" 
-                               class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('rapports.*') ? 'bg-gray-700 text-white' : '' }}">
+                               class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('rapports.*') ? 'bg-indigo-700 text-white' : '' }}">
                                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                 </svg>
@@ -185,7 +185,7 @@
                             <!-- Utilisateurs -->
                             <li>
                                 <a href="{{ route('users.index') }}" 
-                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors {{ request()->routeIs('users.*') ? 'bg-gray-700 text-white' : '' }}">
+                                   class="flex items-center px-4 py-3 text-gray-300 rounded-lg hover:bg-indigo-700 hover:text-white transition-colors {{ request()->routeIs('users.*') ? 'bg-indigo-700 text-white' : '' }}">
                                     <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                                     </svg>
@@ -198,7 +198,7 @@
             </nav>
 
             <!-- Footer Sidebar -->
-            <div class="px-4 py-4 border-t border-gray-700">
+            <div class="px-4 py-4 border-t border-indigo-700">
                 <div class="text-xs text-gray-400 mb-2">
                     Version 1.0.0
                 </div>
@@ -310,7 +310,7 @@
             </header>
 
             <!-- Page Content -->
-            <main class="flex-1 overflow-y-auto bg-gray-50">
+            <main class="flex-1 overflow-y-auto bg-secondary-50">
                 <!-- Page Header -->
                 @if (isset($header))
                     <div class="bg-white border-b border-gray-200 px-4 md:px-6 py-4">

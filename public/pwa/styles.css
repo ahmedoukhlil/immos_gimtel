@@ -8,8 +8,8 @@
    ============================================ */
 
 :root {
-    --primary-color: #4F46E5;
-    --primary-dark: #4338CA;
+    --primary-color: #383f7b;
+    --primary-dark: #2d3366;
     --success-color: #10B981;
     --warning-color: #F59E0B;
     --error-color: #EF4444;
@@ -537,7 +537,7 @@ button:active {
 }
 
 .btn-primary {
-    background: #4F46E5;
+    background: #383f7b;
     color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
@@ -548,7 +548,7 @@ button:active {
 }
 
 .btn-primary:hover:not(:disabled) {
-    background: #4338CA;
+    background: #2d3366;
 }
 
 .btn-primary:disabled {

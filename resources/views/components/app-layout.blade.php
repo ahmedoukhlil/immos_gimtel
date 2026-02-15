@@ -20,7 +20,7 @@
         [x-cloak] { display: none !important; }
     </style>
 </head>
-<body class="font-sans antialiased bg-gray-50">
+<body class="font-sans antialiased bg-secondary-50">
     @include('layouts.app-content')
 </body>
 </html>

@@ -125,11 +125,11 @@
                         </button>
                     @else
                         <button type="submit" 
-                                style="background-color: #4f46e5 !important; color: #ffffff !important; border: 2px solid #4338ca !important;"
+                                style="background-color: #383f7b !important; color: #ffffff !important; border: 2px solid #2d3366 !important;"
                                 class="px-4 py-2 rounded-lg inline-flex items-center font-medium shadow-md transition-all duration-200 focus:outline-none"
-                                onmouseover="this.style.backgroundColor='#4338ca'"
-                                onmouseout="this.style.backgroundColor='#4f46e5'"
-                                onclick="this.style.backgroundColor='#3730a3'">
+                                onmouseover="this.style.backgroundColor='#2d3366'"
+                                onmouseout="this.style.backgroundColor='#383f7b'"
+                                onclick="this.style.backgroundColor='#222850'">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #ffffff !important;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>

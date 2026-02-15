@@ -5,7 +5,7 @@
   "start_url": "/pwa/index-v2.html",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#4F46E5",
+  "theme_color": "#383f7b",
   "orientation": "portrait-primary",
   "scope": "/pwa/",
   "prefer_related_applications": false,

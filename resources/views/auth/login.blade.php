@@ -142,7 +142,7 @@
             <button 
                 type="submit" 
                 :disabled="isLoading"
-                style="background: linear-gradient(135deg, #4F46E5 0%, #4338CA 50%, #3730A3 100%);"
+                style="background: linear-gradient(135deg, #383f7b 0%, #2d3366 50%, #222850 100%);"
                 class="w-full flex justify-center items-center py-4 px-6 border-0 rounded-xl shadow-2xl text-base font-bold text-white hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-indigo-300 focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.02] hover:shadow-3xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
                 <svg x-show="isLoading" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" style="display: none;">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
