@@ -11,11 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Convertir les anciennes valeurs vers les nouvelles
+        // Étape 1 : Élargir l'enum pour accepter les anciennes ET nouvelles valeurs
+        DB::statement("ALTER TABLE inventaire_scans MODIFY COLUMN etat_constate ENUM('neuf', 'bon', 'moyen', 'mauvais', 'bon_etat', 'defectueux') NOT NULL DEFAULT 'bon'");
+
+        // Étape 2 : Convertir les anciennes valeurs vers les nouvelles
         DB::statement("UPDATE inventaire_scans SET etat_constate = 'bon_etat' WHERE etat_constate IN ('bon', 'moyen')");
         DB::statement("UPDATE inventaire_scans SET etat_constate = 'defectueux' WHERE etat_constate = 'mauvais'");
 
-        // Modifier l'enum
+        // Étape 3 : Restreindre l'enum aux nouvelles valeurs uniquement
         DB::statement("ALTER TABLE inventaire_scans MODIFY COLUMN etat_constate ENUM('bon_etat', 'neuf', 'defectueux') NOT NULL DEFAULT 'bon_etat'");
     }
 
