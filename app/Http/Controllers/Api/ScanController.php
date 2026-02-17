@@ -508,7 +508,7 @@ class ScanController extends Controller
     {
         $validated = $request->validate([
             'biens_scannes' => 'required|array',
-            'biens_scannes.*.num_ordre' => 'required|integer|exists:gesimmo,NumOrdre',
+            'biens_scannes.*.num_ordre' => 'required|integer',
             'biens_scannes.*.etat_id' => 'nullable|integer|exists:etat,idEtat',
             'biens_scannes.*.etat_constate' => 'nullable|string|in:bon_etat,neuf,defectueux',
             'biens_scannes.*.photo' => 'nullable|string', // Base64 image
@@ -592,9 +592,18 @@ class ScanController extends Controller
         $biensEnTrop = array_diff($biensScannesList, $biensAttendusList);
 
         // Sauvegarder les scans dans la base de données (avec etat_constate et photo)
-        DB::transaction(function () use ($inventaire, $inventaireLocalisation, $validated, $emplacement, $idEmplacement, $user) {
+        $biensIntrouvables = [];
+        DB::transaction(function () use ($inventaire, $inventaireLocalisation, $validated, $emplacement, $idEmplacement, $user, &$biensIntrouvables) {
             foreach ($validated['biens_scannes'] as $scanItem) {
                 $numOrdre = is_array($scanItem) ? $scanItem['num_ordre'] : $scanItem;
+                
+                // Vérifier que le bien existe dans gesimmo
+                $bien = Gesimmo::find($numOrdre);
+                if (!$bien) {
+                    $biensIntrouvables[] = $numOrdre;
+                    continue;
+                }
+
                 // Utiliser etat_id (table etat) si fourni, sinon etat_constate direct
                 $etatConstate = $scanItem['etat_constate'] ?? null;
                 if (!$etatConstate && isset($scanItem['etat_id'])) {
@@ -608,16 +617,14 @@ class ScanController extends Controller
                     ->first();
 
                 if (!$scanExistant) {
-                    $bien = Gesimmo::find($numOrdre);
                     $photoPath = null;
-
-                    if ($photoBase64 && $bien) {
+                    if ($photoBase64) {
                         $photoPath = $this->savePhotoFromBase64($photoBase64, 'GS' . $numOrdre);
                     }
 
                     // Détecter si le bien est déplacé (emplacement initial ≠ emplacement scanné)
                     $statutScan = 'present';
-                    if ($bien && $bien->idEmplacement != $idEmplacement) {
+                    if ($bien->idEmplacement != $idEmplacement) {
                         $statutScan = 'deplace';
                     }
 
@@ -702,12 +709,14 @@ class ScanController extends Controller
                 'total_scanne' => count($biensScannesList),
                 'total_manquant' => count($biensManquants),
                 'total_en_trop' => count($biensEnTrop),
+                'total_introuvables' => count($biensIntrouvables),
                 'taux_conformite' => count($biensAttendusList) > 0 
-                    ? round((count($biensScannesList) - count($biensEnTrop)) / count($biensAttendusList) * 100, 2) 
+                    ? round((count($biensScannesList) - count($biensEnTrop) - count($biensIntrouvables)) / count($biensAttendusList) * 100, 2) 
                     : 0,
             ],
             'biens_manquants' => $detailsManquants,
             'biens_en_trop' => $detailsEnTrop,
+            'biens_introuvables' => $biensIntrouvables,
         ], 200);
     }
 }

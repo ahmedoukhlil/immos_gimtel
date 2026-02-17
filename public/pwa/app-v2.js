@@ -463,43 +463,21 @@ class BarcodeScannerManager {
             HapticFeedback.light();
             UI.showModalEtatBien(bien);
         } else {
-            // Bien pas dans cet emplacement → vérifier via l'API s'il existe (bien déplacé)
-            console.log('[Barcode] Bien non attendu, vérification API pour déplacé...');
-            try {
-                const response = await API.request(
-                    `/emplacements/${AppState.currentEmplacement.id}/scan`,
-                    {
-                        method: 'POST',
-                        body: JSON.stringify({ num_ordre: numOrdre })
-                    }
-                );
-
-                if (response.success && response.bien) {
-                    const bienDeplace = {
-                        num_ordre: response.bien.num_ordre,
-                        designation: response.bien.designation,
-                        categorie: response.bien.categorie,
-                        etat: response.bien.etat,
-                        statut: response.bien.statut,
-                        emplacement_initial: response.bien.emplacement_initial
-                    };
-
-                    HapticFeedback.warning();
-                    if (response.bien.statut === 'deplace') {
-                        const empInit = response.bien.emplacement_initial;
-                        const originInfo = empInit ? `${empInit.nom} (${empInit.affectation || ''})` : 'inconnu';
-                        UI.showToast(`⚠️ Bien DÉPLACÉ depuis: ${originInfo}`, 'warning');
-                    }
-                    UI.showModalEtatBien(bienDeplace);
-                } else {
-                    HapticFeedback.error();
-                    UI.showToast(`❌ Bien introuvable: ${codeBarre}`, 'error');
-                }
-            } catch (error) {
-                console.error('[Barcode] Erreur vérification bien:', error);
-                HapticFeedback.error();
-                UI.showToast(`❌ ${error.message || 'Bien introuvable'}`, 'error');
-            }
+            // Bien pas dans cet emplacement → accepter comme "non attendu"
+            // La détection de l'emplacement d'origine se fera au clic "Terminer" côté serveur
+            console.log('[Barcode] Bien non attendu dans cet emplacement, N°', numOrdre);
+            HapticFeedback.warning();
+            UI.showToast(`⚠️ Bien N°${numOrdre} non attendu dans cet emplacement`, 'warning');
+            
+            const bienNonAttendu = {
+                num_ordre: numOrdre,
+                designation: `Bien non attendu`,
+                categorie: '-',
+                etat: '-',
+                statut: 'non_attendu',
+                emplacement_initial: null
+            };
+            UI.showModalEtatBien(bienNonAttendu);
         }
     }
 
@@ -601,29 +579,28 @@ class UI {
             list.appendChild(item);
         });
 
-        // Afficher les biens déplacés (scannés mais pas dans biensAttendus)
-        const biensDeplacés = AppState.biensScannés.filter(
+        // Afficher les biens non attendus (scannés mais pas dans biensAttendus)
+        // L'emplacement d'origine sera détecté par le serveur au clic "Terminer"
+        const biensNonAttendus = AppState.biensScannés.filter(
             s => !AppState.biensAttendus.some(b => b.num_ordre === s.num_ordre)
         );
-        if (biensDeplacés.length > 0) {
+        if (biensNonAttendus.length > 0) {
             const separator = document.createElement('div');
             separator.className = 'p-2 bg-amber-100 text-center';
-            separator.innerHTML = '<p class="text-xs font-semibold text-amber-700">🔄 Biens déplacés (trouvés ici)</p>';
+            separator.innerHTML = '<p class="text-xs font-semibold text-amber-700">⚠️ Biens non attendus dans cet emplacement</p>';
             list.appendChild(separator);
 
-            biensDeplacés.forEach(scanData => {
+            biensNonAttendus.forEach(scanData => {
                 const etatObj = scanData.etat_id ? AppState.etats.find(e => e.id === scanData.etat_id) : null;
                 const etatLabel = etatObj ? etatObj.label : '';
-                const empInit = scanData.emplacement_initial;
-                const origin = empInit ? empInit.nom || '' : '';
 
                 const item = document.createElement('div');
                 item.className = 'p-3 bg-amber-50';
                 item.innerHTML = `
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
-                            <p class="font-medium text-amber-900 text-sm">${scanData.designation || 'Bien N°' + scanData.num_ordre}</p>
-                            <p class="text-xs text-amber-700">N° ${scanData.num_ordre}${etatLabel ? ' • ' + etatLabel : ''}${origin ? ' • de: ' + origin : ''}</p>
+                            <p class="font-medium text-amber-900 text-sm">Bien N°${scanData.num_ordre}</p>
+                            <p class="text-xs text-amber-700">Non attendu${etatLabel ? ' • ' + etatLabel : ''}</p>
                         </div>
                         <div class="ml-3">
                             <svg class="w-6 h-6 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
@@ -645,7 +622,7 @@ class UI {
 
         let progressText = `${scannedAttendus}/${total} biens scannés`;
         if (scannedDeplaces > 0) {
-            progressText += ` + ${scannedDeplaces} déplacé(s)`;
+            progressText += ` + ${scannedDeplaces} non attendu(s)`;
         }
         document.getElementById('progress-text').textContent = progressText;
         document.getElementById('progress-percent').textContent = `${percent}%`;
@@ -743,9 +720,9 @@ class UI {
             emplacement_initial: bien.emplacement_initial || null
         });
         
-        const isDeplace = bien.statut === 'deplace';
+        const isNonAttendu = bien.statut === 'non_attendu' || bien.statut === 'deplace';
         HapticFeedback.success();
-        UI.showToast(`${isDeplace ? '🔄' : '✅'} ${bien.designation}`, 'success');
+        UI.showToast(`${isNonAttendu ? '⚠️' : '✅'} ${bien.designation} (N°${bien.num_ordre})`, 'success');
         UI.updateBiensList();
         UI.updateProgress();
         UI.hideModalEtatBien();
@@ -800,6 +777,28 @@ class UI {
             });
         } else {
             document.getElementById('section-deplaces').classList.add('hidden');
+        }
+
+        // Biens introuvables (code-barres ne correspondant à aucun bien en BD)
+        if (data.biens_introuvables && data.biens_introuvables.length > 0) {
+            const sectionDeplaces = document.getElementById('section-deplaces');
+            sectionDeplaces.classList.remove('hidden');
+            const listDeplaces = document.getElementById('list-deplaces');
+
+            const separatorIntrouvable = document.createElement('div');
+            separatorIntrouvable.className = 'bg-gray-100 p-2 rounded text-center mt-3';
+            separatorIntrouvable.innerHTML = '<p class="text-xs font-semibold text-gray-600">❓ Biens introuvables en base de données</p>';
+            listDeplaces.appendChild(separatorIntrouvable);
+
+            data.biens_introuvables.forEach(numOrdre => {
+                const item = document.createElement('div');
+                item.className = 'bg-gray-50 border-l-4 border-gray-400 p-3 rounded';
+                item.innerHTML = `
+                    <p class="font-medium text-gray-800">Bien N°${numOrdre}</p>
+                    <p class="text-sm text-gray-600">Non trouvé dans la base de données</p>
+                `;
+                listDeplaces.appendChild(item);
+            });
         }
     }
 
