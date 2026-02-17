@@ -58,53 +58,124 @@ class RapportService
     }
 
     /**
-     * Détail des immobilisations par emplacement (PDF et vue rapport)
-     * Chaque emplacement liste les immos avec : Code, Désignation, Attendu, Trouvé, Conformité, État
+     * Rapprochement détaillé par emplacement (PDF et vue rapport)
+     * Pour chaque emplacement :
+     *  - Biens attendus : trouvés ou manquants
+     *  - Biens déplacés : trouvés ici mais enregistrés dans un autre emplacement
      */
     public function getDetailParEmplacement(Inventaire $inventaire): array
     {
         $localisationIds = $inventaire->inventaireLocalisations()->pluck('localisation_id')->unique()->toArray();
         $emplacements = Emplacement::whereIn('idLocalisation', $localisationIds)
-            ->with(['localisation', 'immobilisations.designation'])
+            ->with(['localisation', 'affectation', 'immobilisations.designation', 'immobilisations.categorie'])
             ->orderBy('CodeEmplacement')
             ->get();
 
-        $scansByNumOrdre = $inventaire->inventaireScans()
-            ->whereHas('gesimmo')
-            ->with(['gesimmo', 'localisationReelle'])
-            ->get()
-            ->keyBy('bien_id');
+        // Tous les scans de cet inventaire, indexés par bien_id
+        $allScans = $inventaire->inventaireScans()
+            ->with(['gesimmo.designation', 'gesimmo.categorie', 'gesimmo.emplacement', 'localisationReelle'])
+            ->get();
+
+        $scansByBienId = $allScans->keyBy('bien_id');
+
+        // Scans déplacés : biens scannés dans un emplacement différent de leur emplacement d'origine
+        // Groupés par l'emplacement réel (via localisation_reelle_id → emplacements de cette localisation)
+        $scansDeplacesParEmplacement = [];
+        foreach ($allScans as $scan) {
+            if ($scan->statut_scan === 'deplace' && $scan->gesimmo) {
+                // L'emplacement où le bien a été trouvé : on le déduit de la localisation réelle
+                // On cherche dans quel emplacement scanné ce bien déplacé a été trouvé
+                // Le scan a été créé lors du terminerScanEmplacement d'un emplacement spécifique
+                // On utilise le fait que le bien n'est PAS dans son emplacement d'origine
+                $emplacementOrigine = $scan->gesimmo->idEmplacement;
+                // Pour retrouver dans quel emplacement il a été scanné, on regarde la localisation_reelle
+                // et on itère les emplacements pour trouver celui qui contient ce scan
+                foreach ($emplacements as $emp) {
+                    if ($emp->idLocalisation == $scan->localisation_reelle_id && $emp->idEmplacement != $emplacementOrigine) {
+                        $scansDeplacesParEmplacement[$emp->idEmplacement][] = $scan;
+                        break;
+                    }
+                }
+            }
+        }
 
         $result = [];
         foreach ($emplacements as $emplacement) {
-            $lignes = [];
+            $lignesAttendues = [];
+            $lignesDeplaces = [];
+            $totalTrouves = 0;
+            $totalManquants = 0;
+
+            // Biens attendus dans cet emplacement
             foreach ($emplacement->immobilisations as $gesimmo) {
-                $scan = $scansByNumOrdre->get($gesimmo->NumOrdre);
-                $attendu = 1;
-                $trouve = $scan && $scan->statut_scan === 'present' ? 1 : 0;
-                $conformite = $scan ? $this->labelConformite($scan->statut_scan) : 'Non scanné';
+                $scan = $scansByBienId->get($gesimmo->NumOrdre);
+                $trouve = $scan && in_array($scan->statut_scan, ['present', 'deplace']) ? true : false;
+                $estPresent = $scan && $scan->statut_scan === 'present';
                 $etat = $scan ? $this->labelEtat($scan->etat_constate) : '-';
 
-                $lignes[] = [
+                if ($estPresent) {
+                    $observation = 'Présent';
+                    $totalTrouves++;
+                } elseif ($scan && $scan->statut_scan === 'deplace') {
+                    $observation = 'Déplacé';
+                    $totalManquants++;
+                } elseif ($scan && $scan->statut_scan === 'absent') {
+                    $observation = 'Absent';
+                    $totalManquants++;
+                } else {
+                    $observation = 'Non scanné';
+                    $totalManquants++;
+                }
+
+                $lignesAttendues[] = [
+                    'num_ordre' => $gesimmo->NumOrdre,
                     'code' => 'GS' . $gesimmo->NumOrdre,
                     'designation' => $gesimmo->designation->designation ?? 'N/A',
-                    'attendu' => $attendu,
-                    'trouve' => $trouve,
-                    'conformite' => $conformite,
+                    'categorie' => $gesimmo->categorie->Categorie ?? '-',
+                    'attendu' => 'Oui',
+                    'trouve' => $estPresent ? 'Oui' : 'Non',
                     'etat' => $etat,
+                    'observation' => $observation,
                     'statut_scan' => $scan?->statut_scan,
                 ];
             }
+
+            // Biens déplacés trouvés dans cet emplacement (venant d'ailleurs)
+            $deplacesTrouves = $scansDeplacesParEmplacement[$emplacement->idEmplacement] ?? [];
+            foreach ($deplacesTrouves as $scan) {
+                $empOrigine = $scan->gesimmo->emplacement;
+                $origineNom = $empOrigine ? ($empOrigine->Emplacement ?? $empOrigine->CodeEmplacement ?? 'N/A') : 'Inconnu';
+                $etat = $this->labelEtat($scan->etat_constate);
+
+                $lignesDeplaces[] = [
+                    'num_ordre' => $scan->bien_id,
+                    'code' => 'GS' . $scan->bien_id,
+                    'designation' => $scan->gesimmo->designation->designation ?? 'N/A',
+                    'categorie' => $scan->gesimmo->categorie->Categorie ?? '-',
+                    'attendu' => 'Non',
+                    'trouve' => 'Oui',
+                    'etat' => $etat,
+                    'observation' => 'Déplacé de: ' . $origineNom,
+                    'statut_scan' => 'deplace',
+                ];
+            }
+
+            $totalAttendus = count($lignesAttendues);
+            $tauxConformite = $totalAttendus > 0 ? round(($totalTrouves / $totalAttendus) * 100, 1) : 0;
 
             $result[] = [
                 'emplacement_id' => $emplacement->idEmplacement,
                 'code' => $emplacement->CodeEmplacement ?? $emplacement->Emplacement ?? 'N/A',
                 'designation' => $emplacement->Emplacement ?? $emplacement->CodeEmplacement ?? 'N/A',
-                'localisation' => $emplacement->localisation?->CodeLocalisation ?? $emplacement->localisation?->Localisation ?? 'N/A',
-                'total_attendus' => count($lignes),
-                'total_trouves' => collect($lignes)->sum('trouve'),
-                'taux_conformite' => count($lignes) > 0 ? round((collect($lignes)->sum('trouve') / count($lignes)) * 100, 1) : 0,
-                'lignes' => $lignes,
+                'localisation' => $emplacement->localisation?->Localisation ?? $emplacement->localisation?->CodeLocalisation ?? 'N/A',
+                'affectation' => $emplacement->affectation?->Affectation ?? '-',
+                'total_attendus' => $totalAttendus,
+                'total_trouves' => $totalTrouves,
+                'total_manquants' => $totalManquants,
+                'total_deplaces_ici' => count($lignesDeplaces),
+                'taux_conformite' => $tauxConformite,
+                'lignes_attendues' => $lignesAttendues,
+                'lignes_deplaces' => $lignesDeplaces,
             ];
         }
 
@@ -139,7 +210,7 @@ class RapportService
         $pdf = Pdf::loadView('pdf.rapport-inventaire', $data);
         
         // Configuration PDF
-        $pdf->setPaper('a4', 'portrait');
+        $pdf->setPaper('a4', 'landscape');
         $pdf->setOption('isHtml5ParserEnabled', true);
         $pdf->setOption('isRemoteEnabled', true);
         $pdf->setOption('defaultFont', 'DejaVu Sans');
@@ -171,7 +242,7 @@ class RapportService
     {
         $data = $this->preparerDonneesRapport($inventaire);
         $pdf = Pdf::loadView('pdf.rapport-inventaire', $data);
-        $pdf->setPaper('a4', 'portrait');
+        $pdf->setPaper('a4', 'landscape');
         $pdf->setOption('isHtml5ParserEnabled', true);
         $pdf->setOption('isRemoteEnabled', true);
         $pdf->setOption('defaultFont', 'DejaVu Sans');
