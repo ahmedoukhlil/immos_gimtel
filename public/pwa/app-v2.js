@@ -301,17 +301,51 @@ class ScannerManager {
     static async handleQRCodeDetected(data) {
         console.log('[Scanner] QR Code détecté:', data);
         
-        // Format attendu: EMP-{id}
-        const match = data.match(/^EMP-(\d+)$/);
-        
-        if (!match) {
-            console.warn('[Scanner] Format QR Code invalide:', data);
+        let idEmplacement = null;
+
+        // Format 1: EMP-{id} (format standard)
+        const matchEmp = data.match(/^EMP-(\d+)$/);
+        if (matchEmp) {
+            idEmplacement = parseInt(matchEmp[1], 10);
+            console.log('[Scanner] Format EMP-{id} détecté, ID:', idEmplacement);
+        }
+
+        // Format 2: JSON {"type":"...","id":...,"code":"..."}
+        if (!idEmplacement) {
+            try {
+                const json = JSON.parse(data);
+                if (json && json.id) {
+                    if (json.type === 'emplacement') {
+                        idEmplacement = parseInt(json.id, 10);
+                        console.log('[Scanner] Format JSON emplacement détecté, ID:', idEmplacement);
+                    } else if (json.type === 'localisation') {
+                        console.log('[Scanner] Format JSON localisation détecté, ID:', json.id);
+                        HapticFeedback.warning();
+                        UI.showToast(`⚠️ Ceci est un QR de localisation, pas d'emplacement. Utilisez la PWA v1 ou générez des QR codes d'emplacements.`, 'warning');
+                        return;
+                    } else {
+                        idEmplacement = parseInt(json.id, 10);
+                        console.log('[Scanner] Format JSON type "' + json.type + '" détecté, tentative avec ID:', idEmplacement);
+                    }
+                }
+            } catch (e) {
+                // Pas du JSON, continuer
+            }
+        }
+
+        // Format 3: Nombre seul (juste l'ID)
+        if (!idEmplacement && /^\d+$/.test(data.trim())) {
+            idEmplacement = parseInt(data.trim(), 10);
+            console.log('[Scanner] Format nombre seul détecté, ID:', idEmplacement);
+        }
+
+        if (!idEmplacement) {
+            console.warn('[Scanner] Format QR Code non reconnu:', data);
             HapticFeedback.warning();
-            UI.showToast(`⚠️ QR Code non reconnu: ${data}. Format attendu: EMP-{id}`, 'warning');
+            UI.showToast(`⚠️ QR Code non reconnu. Formats acceptés: EMP-{id} ou JSON avec id.`, 'warning');
             return;
         }
 
-        const idEmplacement = parseInt(match[1], 10);
         console.log('[Scanner] ID Emplacement extrait:', idEmplacement);
         
         this.stopScanner();
