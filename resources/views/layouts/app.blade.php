@@ -1,20 +1,14 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="{ 
-    sidebarOpen: true, 
+    sidebarOpen: window.innerWidth >= 768, 
     profileOpen: false,
     isDesktop: window.innerWidth >= 768,
     init() {
-        // Initialiser isDesktop au chargement
         this.isDesktop = window.innerWidth >= 768;
-        if (this.isDesktop) {
-            this.sidebarOpen = true;
-        }
-        // Écouter les changements de taille d'écran
+        this.sidebarOpen = this.isDesktop;
         window.addEventListener('resize', () => {
             this.isDesktop = window.innerWidth >= 768;
-            if (this.isDesktop) {
-                this.sidebarOpen = true;
-            }
+            this.sidebarOpen = this.isDesktop;
         });
     }
 }" :class="{ 'overflow-hidden': sidebarOpen && !isDesktop }">
