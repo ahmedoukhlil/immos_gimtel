@@ -83,7 +83,7 @@ class DashboardInventaire extends Component
         $biensDeplaces = $scans->where('statut_scan', 'deplace')->count();
         $biensAbsents = $scans->where('statut_scan', 'absent')->count();
         $biensDeteriores = $scans->where('statut_scan', 'deteriore')->count();
-        $biensDefectueux = $scans->where('etat_constate', 'mauvais')->count();
+        $biensDefectueux = $scans->where('etat_constate', 'defectueux')->count();
 
         $progressionGlobale = $totalBiensAttendus > 0 
             ? round(($totalBiensScannes / $totalBiensAttendus) * 100, 1) 
@@ -297,9 +297,9 @@ class DashboardInventaire extends Component
             ];
         }
 
-        // Biens défectueux (etat_constate = mauvais, signalés via PWA)
+        // Biens défectueux (etat_constate = defectueux, signalés via PWA)
         $biensDefectueux = $this->inventaire->inventaireScans()
-            ->where('etat_constate', 'mauvais')
+            ->where('etat_constate', 'defectueux')
             ->with(['gesimmo.designation', 'localisationReelle'])
             ->get();
         
@@ -356,7 +356,7 @@ class DashboardInventaire extends Component
             ->count();
         
         $total += $this->inventaire->inventaireScans()
-            ->where('etat_constate', 'mauvais')->count();
+            ->where('etat_constate', 'defectueux')->count();
         
         $total += $this->inventaire->inventaireLocalisations()
             ->whereNull('user_id')->count();

@@ -11,10 +11,9 @@
             'deteriore' => ['label' => 'Détérioré', 'color' => 'bg-orange-100 text-orange-800'],
         ];
         $etatsConstate = [
+            'bon_etat' => ['label' => 'Bon Etat', 'color' => 'bg-blue-100 text-blue-800'],
             'neuf' => ['label' => 'Neuf', 'color' => 'bg-green-100 text-green-800'],
-            'bon' => ['label' => 'Bon état', 'color' => 'bg-blue-100 text-blue-800'],
-            'moyen' => ['label' => 'Bon état', 'color' => 'bg-blue-100 text-blue-800'],
-            'mauvais' => ['label' => 'Défectueuse', 'color' => 'bg-amber-100 text-amber-800'],
+            'defectueux' => ['label' => 'Defectueux', 'color' => 'bg-amber-100 text-amber-800'],
         ];
         $conformiteInterpretation = function($taux) {
             if ($taux >= 95) return ['label' => 'Excellent', 'color' => 'text-green-600', 'bg' => 'bg-green-50'];
@@ -397,7 +396,7 @@
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($this->biensPresents->take(50) as $scan)
-                                    @php $etatKey = $scan->etat_constate ?? 'bon'; $etatStyle = $etatsConstate[$etatKey] ?? $etatsConstate['bon']; @endphp
+                                    @php $etatKey = $scan->etat_constate ?? 'bon_etat'; $etatStyle = $etatsConstate[$etatKey] ?? $etatsConstate['bon_etat']; @endphp
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{{ $scan->code_inventaire }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-900">{{ Str::limit($scan->designation, 50) }}</td>

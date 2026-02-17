@@ -443,6 +443,11 @@ class BarcodeScannerManager {
         console.log('[Barcode] Détecté:', codeBarre);
 
         const numOrdre = parseInt(codeBarre, 10);
+        if (isNaN(numOrdre) || numOrdre <= 0) {
+            HapticFeedback.warning();
+            UI.showToast('⚠️ Code-barres invalide', 'warning');
+            return;
+        }
 
         // Vérifier si déjà scanné
         if (AppState.biensScannés.some(b => b.num_ordre === numOrdre)) {
@@ -451,15 +456,50 @@ class BarcodeScannerManager {
             return;
         }
 
+        // Chercher dans les biens attendus de cet emplacement
         const bien = AppState.biensAttendus.find(b => b.num_ordre === numOrdre);
 
         if (bien) {
             HapticFeedback.light();
-            // Afficher le modal pour définir l'état
             UI.showModalEtatBien(bien);
         } else {
-            HapticFeedback.error();
-            UI.showToast(`⚠️ Bien non attendu: ${codeBarre}`, 'warning');
+            // Bien pas dans cet emplacement → vérifier via l'API s'il existe (bien déplacé)
+            console.log('[Barcode] Bien non attendu, vérification API pour déplacé...');
+            try {
+                const response = await API.request(
+                    `/emplacements/${AppState.currentEmplacement.id}/scan`,
+                    {
+                        method: 'POST',
+                        body: JSON.stringify({ num_ordre: numOrdre })
+                    }
+                );
+
+                if (response.success && response.bien) {
+                    const bienDeplace = {
+                        num_ordre: response.bien.num_ordre,
+                        designation: response.bien.designation,
+                        categorie: response.bien.categorie,
+                        etat: response.bien.etat,
+                        statut: response.bien.statut,
+                        emplacement_initial: response.bien.emplacement_initial
+                    };
+
+                    HapticFeedback.warning();
+                    if (response.bien.statut === 'deplace') {
+                        const empInit = response.bien.emplacement_initial;
+                        const originInfo = empInit ? `${empInit.nom} (${empInit.affectation || ''})` : 'inconnu';
+                        UI.showToast(`⚠️ Bien DÉPLACÉ depuis: ${originInfo}`, 'warning');
+                    }
+                    UI.showModalEtatBien(bienDeplace);
+                } else {
+                    HapticFeedback.error();
+                    UI.showToast(`❌ Bien introuvable: ${codeBarre}`, 'error');
+                }
+            } catch (error) {
+                console.error('[Barcode] Erreur vérification bien:', error);
+                HapticFeedback.error();
+                UI.showToast(`❌ ${error.message || 'Bien introuvable'}`, 'error');
+            }
         }
     }
 
@@ -534,6 +574,7 @@ class UI {
         const list = document.getElementById('biens-list');
         list.innerHTML = '';
 
+        // Afficher les biens attendus
         AppState.biensAttendus.forEach(bien => {
             const scanData = AppState.biensScannés.find(b => b.num_ordre === bien.num_ordre);
             const isScanned = !!scanData;
@@ -559,14 +600,54 @@ class UI {
             `;
             list.appendChild(item);
         });
+
+        // Afficher les biens déplacés (scannés mais pas dans biensAttendus)
+        const biensDeplacés = AppState.biensScannés.filter(
+            s => !AppState.biensAttendus.some(b => b.num_ordre === s.num_ordre)
+        );
+        if (biensDeplacés.length > 0) {
+            const separator = document.createElement('div');
+            separator.className = 'p-2 bg-amber-100 text-center';
+            separator.innerHTML = '<p class="text-xs font-semibold text-amber-700">🔄 Biens déplacés (trouvés ici)</p>';
+            list.appendChild(separator);
+
+            biensDeplacés.forEach(scanData => {
+                const etatObj = scanData.etat_id ? AppState.etats.find(e => e.id === scanData.etat_id) : null;
+                const etatLabel = etatObj ? etatObj.label : '';
+                const empInit = scanData.emplacement_initial;
+                const origin = empInit ? empInit.nom || '' : '';
+
+                const item = document.createElement('div');
+                item.className = 'p-3 bg-amber-50';
+                item.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <p class="font-medium text-amber-900 text-sm">${scanData.designation || 'Bien N°' + scanData.num_ordre}</p>
+                            <p class="text-xs text-amber-700">N° ${scanData.num_ordre}${etatLabel ? ' • ' + etatLabel : ''}${origin ? ' • de: ' + origin : ''}</p>
+                        </div>
+                        <div class="ml-3">
+                            <svg class="w-6 h-6 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
     }
 
     static updateProgress() {
         const total = AppState.biensAttendus.length;
-        const scanned = AppState.biensScannés.length;
-        const percent = total > 0 ? Math.round((scanned / total) * 100) : 0;
+        const scannedAttendus = AppState.biensScannés.filter(
+            s => AppState.biensAttendus.some(b => b.num_ordre === s.num_ordre)
+        ).length;
+        const scannedDeplaces = AppState.biensScannés.length - scannedAttendus;
+        const percent = total > 0 ? Math.round((scannedAttendus / total) * 100) : 0;
 
-        document.getElementById('progress-text').textContent = `${scanned}/${total} biens scannés`;
+        let progressText = `${scannedAttendus}/${total} biens scannés`;
+        if (scannedDeplaces > 0) {
+            progressText += ` + ${scannedDeplaces} déplacé(s)`;
+        }
+        document.getElementById('progress-text').textContent = progressText;
         document.getElementById('progress-percent').textContent = `${percent}%`;
         document.getElementById('progress-bar').style.width = `${percent}%`;
     }
@@ -655,11 +736,16 @@ class UI {
         AppState.biensScannés.push({
             num_ordre: bien.num_ordre,
             etat_id: etatId ? parseInt(etatId, 10) : null,
-            photo: photoBase64 || null
+            photo: photoBase64 || null,
+            designation: bien.designation || null,
+            categorie: bien.categorie || null,
+            statut: bien.statut || 'present',
+            emplacement_initial: bien.emplacement_initial || null
         });
         
+        const isDeplace = bien.statut === 'deplace';
         HapticFeedback.success();
-        UI.showToast(`✅ ${bien.designation}`, 'success');
+        UI.showToast(`${isDeplace ? '🔄' : '✅'} ${bien.designation}`, 'success');
         UI.updateBiensList();
         UI.updateProgress();
         UI.hideModalEtatBien();
@@ -670,12 +756,13 @@ class UI {
 
         document.getElementById('stat-scannes').textContent = stats.total_scanne;
         document.getElementById('stat-manquants').textContent = stats.total_manquant;
+        document.getElementById('stat-deplaces').textContent = stats.total_en_trop || 0;
         
         document.getElementById('conformite-bar').style.width = `${stats.taux_conformite}%`;
         document.getElementById('conformite-text').textContent = `${stats.taux_conformite}%`;
 
         // Biens manquants
-        if (data.biens_manquants.length > 0) {
+        if (data.biens_manquants && data.biens_manquants.length > 0) {
             document.getElementById('section-manquants').classList.remove('hidden');
             const listManquants = document.getElementById('list-manquants');
             listManquants.innerHTML = '';
@@ -691,6 +778,28 @@ class UI {
             });
         } else {
             document.getElementById('section-manquants').classList.add('hidden');
+        }
+
+        // Biens déplacés (scannés ici mais enregistrés dans un autre emplacement)
+        if (data.biens_en_trop && data.biens_en_trop.length > 0) {
+            document.getElementById('section-deplaces').classList.remove('hidden');
+            const listDeplaces = document.getElementById('list-deplaces');
+            listDeplaces.innerHTML = '';
+
+            data.biens_en_trop.forEach(bien => {
+                const empInit = bien.emplacement_initial;
+                const origin = empInit ? `${empInit.nom || ''} ${empInit.affectation ? '• ' + empInit.affectation : ''}` : 'Inconnu';
+                const item = document.createElement('div');
+                item.className = 'bg-amber-50 border-l-4 border-amber-500 p-3 rounded';
+                item.innerHTML = `
+                    <p class="font-medium text-amber-800">${bien.designation}</p>
+                    <p class="text-sm text-amber-700">N° ${bien.num_ordre} • ${bien.categorie}</p>
+                    <p class="text-xs text-amber-600 mt-1">📍 Emplacement d'origine: ${origin}</p>
+                `;
+                listDeplaces.appendChild(item);
+            });
+        } else {
+            document.getElementById('section-deplaces').classList.add('hidden');
         }
     }
 

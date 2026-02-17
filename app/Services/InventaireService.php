@@ -405,11 +405,11 @@ class InventaireService
         $biensDeplaces = $scans->where('statut_scan', 'deplace')->count();
         $biensAbsents = $scans->where('statut_scan', 'absent')->count();
         $biensDeteriores = $scans->where('statut_scan', 'deteriore')->count();
-        $biensDefectueux = $scans->where('etat_constate', 'mauvais')->count();
+        $biensDefectueux = $scans->where('etat_constate', 'defectueux')->count();
 
-        // Répartition par état physique (Neuf, Bon état, Défectueuse)
+        // Répartition par état physique (Bon Etat, Neuf, Defectueux)
         $biensNeufs = $scans->where('etat_constate', 'neuf')->count();
-        $biensBonEtat = $scans->whereIn('etat_constate', ['bon', 'moyen'])->count();
+        $biensBonEtat = $scans->where('etat_constate', 'bon_etat')->count();
 
         $progressionGlobale = $totalLocalisations > 0 
             ? round(($localisationsTerminees / $totalLocalisations) * 100, 2) 
@@ -661,9 +661,9 @@ class InventaireService
             ];
         }
 
-        // Biens défectueux (etat_constate = mauvais, signalés via PWA)
+        // Biens défectueux (etat_constate = defectueux, signalés via PWA)
         $biensDefectueux = $inventaire->inventaireScans()
-            ->where('etat_constate', 'mauvais')
+            ->where('etat_constate', 'defectueux')
             ->with(['bien', 'gesimmo.designation', 'localisationReelle'])
             ->get();
         

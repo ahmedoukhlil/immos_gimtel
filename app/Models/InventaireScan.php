@@ -172,17 +172,16 @@ class InventaireScan extends Model
     }
 
     /**
-     * Libellé de l'état constaté (3 états: Neuf, Bon état, Défectueuse)
+     * Libellé de l'état constaté (3 états: Bon Etat, Neuf, Defectueux)
      */
     public function getEtatConstateLabelAttribute(): string
     {
         $labels = [
+            'bon_etat' => 'Bon Etat',
             'neuf' => 'Neuf',
-            'bon' => 'Bon état',
-            'moyen' => 'Bon état',
-            'mauvais' => 'Défectueuse',
+            'defectueux' => 'Defectueux',
         ];
-        return $labels[$this->etat_constate ?? 'bon'] ?? 'Bon état';
+        return $labels[$this->etat_constate ?? 'bon_etat'] ?? 'Bon Etat';
     }
 
     /**

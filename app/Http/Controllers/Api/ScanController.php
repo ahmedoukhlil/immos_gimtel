@@ -49,7 +49,7 @@ class ScanController extends Controller
             'bien_id' => 'required|integer',
             'statut_scan' => 'required|in:present,deplace,absent,deteriore',
             'localisation_reelle_id' => 'required|exists:localisation,idLocalisation',
-            'etat_constate' => 'required|in:neuf,bon,moyen,mauvais',
+            'etat_constate' => 'required|in:bon_etat,neuf,defectueux',
             'commentaire' => 'nullable|string|max:1000',
             'photo' => 'nullable|string', // Base64 image
         ]);
@@ -148,7 +148,7 @@ class ScanController extends Controller
             'scans.*.bien_id' => 'required|integer',
             'scans.*.statut_scan' => 'required|in:present,deplace,absent,deteriore',
             'scans.*.localisation_reelle_id' => 'required|exists:localisation,idLocalisation',
-            'scans.*.etat_constate' => 'required|in:neuf,bon,moyen,mauvais',
+            'scans.*.etat_constate' => 'required|in:bon_etat,neuf,defectueux',
             'scans.*.commentaire' => 'nullable|string|max:1000',
             'scans.*.photo' => 'nullable|string',
         ]);
@@ -317,7 +317,7 @@ class ScanController extends Controller
                     'id' => $etat->idEtat,
                     'label' => $etat->Etat,
                     'code' => $etat->CodeEtat,
-                    'require_photo' => ($constate === 'mauvais'),
+                    'require_photo' => ($constate === 'defectueux'),
                 ];
             });
 
@@ -326,7 +326,8 @@ class ScanController extends Controller
 
     /**
      * Mapper idEtat (table etat) vers etat_constate (enum inventaire_scans)
-     * Sans modification de la BD
+     * Table etat: 1=Bon Etat (BE), 2=Neuf (NF), 3=Defectueux (DFCT)
+     * Enum etat_constate: bon_etat, neuf, defectueux
      *
      * @param int|null $idEtat
      * @return string
@@ -334,34 +335,37 @@ class ScanController extends Controller
     private function mapEtatToConstate(?int $idEtat): string
     {
         if (!$idEtat) {
-            return 'bon';
+            return 'bon_etat';
         }
 
         $etat = Etat::find($idEtat);
         if (!$etat) {
-            return 'bon';
+            return 'bon_etat';
         }
 
-        // CodeEtat si valide (neuf, bon, moyen, mauvais)
-        if ($etat->CodeEtat && in_array(strtolower($etat->CodeEtat), ['neuf', 'bon', 'moyen', 'mauvais'])) {
-            return strtolower($etat->CodeEtat);
+        // Mapping par CodeEtat
+        $mapCode = [
+            'BE' => 'bon_etat',
+            'NF' => 'neuf',
+            'DFCT' => 'defectueux',
+        ];
+
+        if ($etat->CodeEtat && isset($mapCode[strtoupper($etat->CodeEtat)])) {
+            return $mapCode[strtoupper($etat->CodeEtat)];
         }
 
-        // Mapping par libellé Etat (3 états: Neuf, Bon état, Défectueuse)
-        $map = [
+        // Mapping par libellé Etat
+        $mapLabel = [
+            'bon etat' => 'bon_etat',
+            'bon état' => 'bon_etat',
             'neuf' => 'neuf',
-            'bon' => 'bon',
-            'bon etat' => 'bon',
-            'bon état' => 'bon',
-            'moyen' => 'bon',
-            'mauvais' => 'mauvais',
-            'défectueux' => 'mauvais',
-            'defectueux' => 'mauvais',
-            'défectueuse' => 'mauvais',
-            'defectueuse' => 'mauvais',
+            'defectueux' => 'defectueux',
+            'défectueux' => 'defectueux',
+            'defectueuse' => 'defectueux',
+            'défectueuse' => 'defectueux',
         ];
         $label = mb_strtolower(trim($etat->Etat));
-        return $map[$label] ?? 'bon';
+        return $mapLabel[$label] ?? 'bon_etat';
     }
 
     /**
@@ -506,7 +510,7 @@ class ScanController extends Controller
             'biens_scannes' => 'required|array',
             'biens_scannes.*.num_ordre' => 'required|integer|exists:gesimmo,NumOrdre',
             'biens_scannes.*.etat_id' => 'nullable|integer|exists:etat,idEtat',
-            'biens_scannes.*.etat_constate' => 'nullable|string|in:neuf,bon,moyen,mauvais',
+            'biens_scannes.*.etat_constate' => 'nullable|string|in:bon_etat,neuf,defectueux',
             'biens_scannes.*.photo' => 'nullable|string', // Base64 image
         ]);
 
@@ -596,7 +600,7 @@ class ScanController extends Controller
                 if (!$etatConstate && isset($scanItem['etat_id'])) {
                     $etatConstate = $this->mapEtatToConstate((int) $scanItem['etat_id']);
                 }
-                $etatConstate = $etatConstate ?: 'bon';
+                $etatConstate = $etatConstate ?: 'bon_etat';
                 $photoBase64 = $scanItem['photo'] ?? null;
 
                 $scanExistant = InventaireScan::where('inventaire_id', $inventaire->id)

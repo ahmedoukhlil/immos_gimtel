@@ -8,11 +8,9 @@
             'materiel' => ['label' => 'Matériel', 'color' => 'bg-green-100 text-green-800'],
         ];
         $etats = [
+            'bon etat' => ['label' => 'Bon Etat', 'color' => 'bg-blue-100 text-blue-800'],
             'neuf' => ['label' => 'Neuf', 'color' => 'bg-green-100 text-green-800'],
-            'bon' => ['label' => 'Bon', 'color' => 'bg-green-100 text-green-800'],
-            'moyen' => ['label' => 'Moyen', 'color' => 'bg-yellow-100 text-yellow-800'],
-            'mauvais' => ['label' => 'Mauvais', 'color' => 'bg-red-100 text-red-800'],
-            'reforme' => ['label' => 'Réformé', 'color' => 'bg-gray-100 text-gray-800'],
+            'defectueux' => ['label' => 'Defectueux', 'color' => 'bg-red-100 text-red-800'],
         ];
         $statutsInventaire = [
             'en_attente' => ['label' => 'En attente', 'color' => 'bg-gray-100 text-gray-800'],

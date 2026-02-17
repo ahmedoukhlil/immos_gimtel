@@ -268,14 +268,18 @@
                     <h2 class="text-2xl font-bold text-gray-900 mb-4">Résultats du Scan</h2>
                     
                     <!-- Statistiques -->
-                    <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="grid grid-cols-3 gap-3 mb-6">
                         <div class="bg-green-50 p-4 rounded-lg">
-                            <p class="text-sm text-green-600">Scannés</p>
+                            <p class="text-xs text-green-600">Scannés</p>
                             <p id="stat-scannes" class="text-2xl font-bold text-green-700">0</p>
                         </div>
                         <div class="bg-red-50 p-4 rounded-lg">
-                            <p class="text-sm text-red-600">Manquants</p>
+                            <p class="text-xs text-red-600">Manquants</p>
                             <p id="stat-manquants" class="text-2xl font-bold text-red-700">0</p>
+                        </div>
+                        <div class="bg-amber-50 p-4 rounded-lg">
+                            <p class="text-xs text-amber-600">Déplacés</p>
+                            <p id="stat-deplaces" class="text-2xl font-bold text-amber-700">0</p>
                         </div>
                     </div>
 
@@ -294,6 +298,15 @@
                     <div id="section-manquants" class="hidden mb-6">
                         <h3 class="font-semibold text-gray-800 mb-3">❌ Biens Manquants</h3>
                         <div id="list-manquants" class="space-y-2">
+                            <!-- Liste dynamique -->
+                        </div>
+                    </div>
+
+                    <!-- Biens Déplacés -->
+                    <div id="section-deplaces" class="hidden mb-6">
+                        <h3 class="font-semibold text-gray-800 mb-3">🔄 Biens Déplacés</h3>
+                        <p class="text-xs text-gray-500 mb-2">Biens trouvés ici mais enregistrés dans un autre emplacement</p>
+                        <div id="list-deplaces" class="space-y-2">
                             <!-- Liste dynamique -->
                         </div>
                     </div>

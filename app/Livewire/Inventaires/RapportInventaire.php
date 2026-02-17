@@ -132,12 +132,12 @@ class RapportInventaire extends Component
     }
 
     /**
-     * Propriété calculée : Retourne les biens défectueux (etat_constate = mauvais, signalés via PWA)
+     * Propriété calculée : Retourne les biens défectueux (etat_constate = defectueux, signalés via PWA)
      */
     public function getBiensDefectueuxProperty()
     {
         $query = $this->inventaire->inventaireScans()
-            ->where('etat_constate', 'mauvais')
+            ->where('etat_constate', 'defectueux')
             ->with(['bien.designation', 'bien.emplacement.localisation', 'localisationReelle', 'agent']);
 
         if ($this->filterEmplacement !== 'all') {

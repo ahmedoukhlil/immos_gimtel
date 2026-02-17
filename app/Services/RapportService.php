@@ -125,9 +125,9 @@ class RapportService
     protected function labelEtat(?string $etat): string
     {
         return match ($etat) {
+            'bon_etat' => 'Bon Etat',
             'neuf' => 'Neuf',
-            'bon', 'moyen' => 'Bon état',
-            'mauvais' => 'Défectueuse',
+            'defectueux' => 'Defectueux',
             default => '-',
         };
     }
