@@ -56,6 +56,17 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
 
     /*
     |----------------------------------------------------------------------
+    | Profil Utilisateur
+    |----------------------------------------------------------------------
+    |
+    | Accessible à tous les utilisateurs authentifiés pour modifier
+    | leur mot de passe.
+    |
+    */
+    Route::get('/profil', \App\Livewire\Profil::class)->name('profil');
+
+    /*
+    |----------------------------------------------------------------------
     | Routes avec Middleware 'inventory' (Admin + Agent)
     |----------------------------------------------------------------------
     |
