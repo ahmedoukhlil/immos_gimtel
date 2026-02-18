@@ -24,6 +24,7 @@ class DashboardInventaire extends Component
     public $searchLoc = '';
     public $sortField = 'code';
     public $sortDirection = 'asc';
+    public $activeAgentDropdown = null;
 
     /**
      * Initialisation du composant
@@ -595,6 +596,16 @@ class DashboardInventaire extends Component
             $this->sortField = $field;
             $this->sortDirection = 'asc';
         }
+    }
+
+    public function toggleAgentDropdown($invLocId): void
+    {
+        $this->activeAgentDropdown = $this->activeAgentDropdown === $invLocId ? null : $invLocId;
+    }
+
+    public function closeAgentDropdown(): void
+    {
+        $this->activeAgentDropdown = null;
     }
 
     /**
