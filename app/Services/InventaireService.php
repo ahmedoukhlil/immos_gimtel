@@ -668,11 +668,21 @@ class InventaireService
             ->get();
         
         foreach ($biensDefectueux as $scan) {
+            $photoAbsolutePath = null;
+            if ($scan->photo_path) {
+                $fullPath = storage_path('app/public/' . ltrim(str_replace('\\', '/', $scan->photo_path), '/'));
+                if (file_exists($fullPath)) {
+                    $photoAbsolutePath = $fullPath;
+                }
+            }
+
             $alertes['biens_defectueux'][] = [
                 'bien_id' => $scan->bien_id,
                 'code' => $scan->code_inventaire,
                 'designation' => $scan->designation,
                 'localisation' => $scan->localisationReelle?->CodeLocalisation ?? $scan->localisationReelle?->Localisation ?? 'N/A',
+                'photo_path' => $scan->photo_path,
+                'photo_absolute' => $photoAbsolutePath,
             ];
         }
 

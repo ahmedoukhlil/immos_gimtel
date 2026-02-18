@@ -329,25 +329,27 @@
 
     @if($totalAnomalies > 0)
         @if(count($anomalies['biens_defectueux'] ?? []) > 0)
-        <h2 style="font-size: 9pt; margin: 10px 0 6px 0;">Biens signalés défectueux</h2>
-        <table class="rapport">
-            <thead>
+        <h2 style="font-size: 9pt; margin: 10px 0 6px 0;">Biens signalés défectueux ({{ count($anomalies['biens_defectueux']) }})</h2>
+
+        @foreach($anomalies['biens_defectueux'] as $b)
+        <div class="no-break" style="border: 1px solid #fca5a5; margin-bottom: 10px; background: #fef2f2;">
+            <table style="width: 100%; border-collapse: collapse;">
                 <tr>
-                    <th>Code</th>
-                    <th>Désignation</th>
-                    <th>Localisation</th>
+                    <td style="padding: 8px 10px; vertical-align: top; {{ !empty($b['photo_absolute']) ? 'width: 70%;' : 'width: 100%;' }}">
+                        <p style="font-size: 9pt; font-weight: bold; color: #991b1b; margin-bottom: 4px;">{{ $b['code'] ?? 'N/A' }} — {{ $b['designation'] ?? 'N/A' }}</p>
+                        <p style="font-size: 8pt; color: #7f1d1d;">Localisation : {{ $b['localisation'] ?? 'N/A' }}</p>
+                        <p style="font-size: 7pt; color: #dc2626; margin-top: 3px; font-weight: bold;">DEFECTUEUX</p>
+                    </td>
+                    @if(!empty($b['photo_absolute']))
+                    <td style="padding: 6px; vertical-align: top; width: 30%; text-align: center;">
+                        <img src="{{ $b['photo_absolute'] }}" style="max-width: 180px; max-height: 120px; border: 2px solid #fca5a5; object-fit: contain;">
+                        <p style="font-size: 6pt; color: #9ca3af; margin-top: 2px;">Photo prise lors du scan</p>
+                    </td>
+                    @endif
                 </tr>
-            </thead>
-            <tbody>
-                @foreach($anomalies['biens_defectueux'] as $b)
-                <tr>
-                    <td><strong>{{ $b['code'] ?? 'N/A' }}</strong></td>
-                    <td>{{ $b['designation'] ?? 'N/A' }}</td>
-                    <td>{{ $b['localisation'] ?? 'N/A' }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
+            </table>
+        </div>
+        @endforeach
         @endif
 
         @if(count($anomalies['localisations_non_demarrees'] ?? []) > 0)
