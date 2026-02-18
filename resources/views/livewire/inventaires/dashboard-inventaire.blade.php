@@ -433,18 +433,22 @@
                                             <span class="text-[10px] text-gray-400">+{{ $allAgents->count() - 2 }}</span>
                                         @endif
                                         @if($isAdmin)
-                                            <div x-data="{ open: false }" class="relative">
-                                                <button @click="open = !open" class="p-1 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                            <div x-data="{ open: false }" class="relative" @click.away="open = false">
+                                                <button @click.stop="open = !open" class="p-1 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Gérer les agents">
                                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                                                 </button>
-                                                <div x-show="open" @click.away="open = false" x-transition x-cloak class="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-40 max-h-52 overflow-y-auto">
-                                                    @foreach($this->agents as $agent)
+                                                <div x-show="open" x-transition x-cloak class="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[60] max-h-60 overflow-y-auto">
+                                                    <p class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase border-b border-gray-100 mb-1">Assigner agents</p>
+                                                    @foreach($this->agentsDisponibles as $agent)
                                                         @php $isAssigned = $allAgents->contains('idUser', $agent->idUser); @endphp
-                                                        <button wire:click="toggleAgentLocalisation({{ $invLoc->id }}, {{ $agent->idUser }})" @click="open = false" class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-indigo-50 {{ $isAssigned ? 'bg-indigo-50/60' : 'text-gray-700' }}">
-                                                            <div class="w-3.5 h-3.5 rounded border-2 flex items-center justify-center flex-shrink-0 {{ $isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300' }}">
-                                                                @if($isAssigned)<svg class="w-2 h-2 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>@endif
+                                                        <button wire:click="toggleAgentLocalisation({{ $invLoc->id }}, {{ $agent->idUser }})" @click.stop class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-indigo-50 transition-colors {{ $isAssigned ? 'bg-indigo-50/60' : 'text-gray-700' }}">
+                                                            <div class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors {{ $isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300' }}">
+                                                                @if($isAssigned)<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>@endif
                                                             </div>
                                                             <span class="truncate {{ $isAssigned ? 'text-indigo-700 font-medium' : '' }}">{{ $agent->users ?? 'Agent' }}</span>
+                                                            @if($isAssigned)
+                                                                <span class="ml-auto text-[9px] text-indigo-400">assigné</span>
+                                                            @endif
                                                         </button>
                                                     @endforeach
                                                 </div>
@@ -478,30 +482,51 @@
                         $progressionColor = $progression >= 100 ? 'bg-green-500' : ($progression >= 50 ? 'bg-indigo-500' : 'bg-indigo-300');
                         $allAgents = $invLoc->agents->isNotEmpty() ? $invLoc->agents : ($invLoc->agent ? collect([$invLoc->agent]) : collect());
                     @endphp
-                    <a href="{{ route('localisations.show', $invLoc->localisation) }}" class="block px-5 py-4 hover:bg-gray-50 transition-colors">
-                        <div class="flex items-start justify-between gap-3 mb-2">
-                            <div class="min-w-0">
-                                <p class="text-sm font-semibold text-gray-900 truncate">{{ $invLoc->localisation->Localisation ?? 'N/A' }}</p>
-                                <p class="text-xs text-gray-400">{{ $invLoc->localisation->CodeLocalisation ?? '' }}</p>
+                    <div class="px-5 py-4 hover:bg-gray-50 transition-colors">
+                        <a href="{{ route('localisations.show', $invLoc->localisation) }}" class="block">
+                            <div class="flex items-start justify-between gap-3 mb-2">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-gray-900 truncate">{{ $invLoc->localisation->Localisation ?? 'N/A' }}</p>
+                                    <p class="text-xs text-gray-400">{{ $invLoc->localisation->CodeLocalisation ?? '' }}</p>
+                                </div>
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 {{ $statutsLoc[$invLoc->statut]['color'] ?? 'bg-gray-100 text-gray-700' }}">
+                                    {{ $statutsLoc[$invLoc->statut]['label'] ?? $invLoc->statut }}
+                                </span>
                             </div>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 {{ $statutsLoc[$invLoc->statut]['color'] ?? 'bg-gray-100 text-gray-700' }}">
-                                {{ $statutsLoc[$invLoc->statut]['label'] ?? $invLoc->statut }}
-                            </span>
+                            <div class="flex items-center gap-3">
+                                <div class="flex-1 bg-gray-100 rounded-full h-1.5">
+                                    <div class="{{ $progressionColor }} h-1.5 rounded-full" style="width: {{ min($progression, 100) }}%"></div>
+                                </div>
+                                <span class="text-xs tabular-nums text-gray-500 flex-shrink-0">{{ $invLoc->nombre_biens_scannes }}/{{ $invLoc->nombre_biens_attendus }}</span>
+                            </div>
+                        </a>
+                        <div class="flex flex-wrap items-center gap-1 mt-2">
+                            @forelse($allAgents as $ag)
+                                <span class="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full">{{ $ag->users ?? 'Agent' }}</span>
+                            @empty
+                                <span class="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Non assigné</span>
+                            @endforelse
+                            @if($isAdmin)
+                                <div x-data="{ open: false }" class="relative" @click.away="open = false">
+                                    <button @click.stop="open = !open" class="p-1 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Gérer les agents">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                    </button>
+                                    <div x-show="open" x-transition x-cloak class="absolute left-0 bottom-full mb-1 w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[60] max-h-60 overflow-y-auto">
+                                        <p class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase border-b border-gray-100 mb-1">Assigner agents</p>
+                                        @foreach($this->agentsDisponibles as $agent)
+                                            @php $isAssigned = $allAgents->contains('idUser', $agent->idUser); @endphp
+                                            <button wire:click="toggleAgentLocalisation({{ $invLoc->id }}, {{ $agent->idUser }})" @click.stop class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-indigo-50 transition-colors {{ $isAssigned ? 'bg-indigo-50/60' : 'text-gray-700' }}">
+                                                <div class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors {{ $isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300' }}">
+                                                    @if($isAssigned)<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>@endif
+                                                </div>
+                                                <span class="truncate {{ $isAssigned ? 'text-indigo-700 font-medium' : '' }}">{{ $agent->users ?? 'Agent' }}</span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
-                        <div class="flex items-center gap-3">
-                            <div class="flex-1 bg-gray-100 rounded-full h-1.5">
-                                <div class="{{ $progressionColor }} h-1.5 rounded-full" style="width: {{ min($progression, 100) }}%"></div>
-                            </div>
-                            <span class="text-xs tabular-nums text-gray-500 flex-shrink-0">{{ $invLoc->nombre_biens_scannes }}/{{ $invLoc->nombre_biens_attendus }}</span>
-                        </div>
-                        @if($allAgents->isNotEmpty())
-                            <div class="flex flex-wrap gap-1 mt-2">
-                                @foreach($allAgents->take(3) as $ag)
-                                    <span class="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full">{{ $ag->users ?? 'Agent' }}</span>
-                                @endforeach
-                            </div>
-                        @endif
-                    </a>
+                    </div>
                 @empty
                     <div class="px-5 py-12 text-center">
                         <p class="text-sm text-gray-500">Aucune localisation trouvée</p>

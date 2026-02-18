@@ -5,6 +5,7 @@ namespace App\Livewire\Inventaires;
 use App\Models\Inventaire;
 use App\Models\InventaireLocalisation;
 use App\Models\InventaireScan;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -210,7 +211,7 @@ class DashboardInventaire extends Component
     }
 
     /**
-     * Propriété calculée : Retourne la liste des agents assignés
+     * Propriété calculée : Retourne la liste des agents assignés à cet inventaire (pour les filtres)
      */
     public function getAgentsProperty()
     {
@@ -230,6 +231,16 @@ class DashboardInventaire extends Component
         }
 
         return $allAgents->unique('idUser')->values();
+    }
+
+    /**
+     * Propriété calculée : Retourne tous les utilisateurs pouvant être assignés (pour le dropdown d'assignation)
+     */
+    public function getAgentsDisponiblesProperty()
+    {
+        return User::whereIn('role', ['agent', 'admin_stock', 'admin'])
+            ->orderBy('users')
+            ->get();
     }
 
     /**
@@ -533,7 +544,7 @@ class DashboardInventaire extends Component
             return;
         }
 
-        $invLoc = InventaireLocalisation::find($invLocId);
+        $invLoc = InventaireLocalisation::with('agents')->find($invLocId);
 
         if (!$invLoc || $invLoc->inventaire_id !== $this->inventaire->id) {
             session()->flash('error', 'Localisation introuvable.');
@@ -542,7 +553,9 @@ class DashboardInventaire extends Component
 
         try {
             $userId = (int) $userId;
-            if ($invLoc->agents->contains('idUser', $userId)) {
+            $isCurrentlyAssigned = $invLoc->agents->contains('idUser', $userId);
+
+            if ($isCurrentlyAssigned) {
                 $invLoc->agents()->detach($userId);
                 if ($invLoc->user_id === $userId) {
                     $remaining = $invLoc->agents()->first();
@@ -554,8 +567,12 @@ class DashboardInventaire extends Component
                     $invLoc->update(['user_id' => $userId]);
                 }
             }
-            $invLoc->load('agents');
-            session()->flash('success', 'Assignation mise à jour.');
+
+            $this->inventaire->load([
+                'inventaireLocalisations.localisation',
+                'inventaireLocalisations.agent',
+                'inventaireLocalisations.agents',
+            ]);
         } catch (\Exception $e) {
             session()->flash('error', 'Erreur: ' . $e->getMessage());
         }
