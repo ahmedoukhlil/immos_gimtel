@@ -21,13 +21,13 @@
         <div class="mb-8">
             <div class="flex items-center">
                 {{-- Étape 1 --}}
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 cursor-pointer" @click="if(etape > 1) $wire.set('etapeActuelle', 1)">
                     <div class="w-9 h-9 rounded-full flex items-center justify-center transition-colors
                         {{ $etapeActuelle >= 1 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-400' }}">
                         @if($etapeActuelle > 1)
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         @else
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-sm font-bold">1</span>
                         @endif
                     </div>
                     <span class="text-sm font-medium {{ $etapeActuelle >= 1 ? 'text-gray-900' : 'text-gray-400' }}">Informations</span>
@@ -36,13 +36,13 @@
                 <div class="flex-1 h-px mx-4 {{ $etapeActuelle >= 2 ? 'bg-indigo-600' : 'bg-gray-200' }} transition-colors"></div>
 
                 {{-- Étape 2 --}}
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 cursor-pointer" @click="if(etape > 2) $wire.set('etapeActuelle', 2)">
                     <div class="w-9 h-9 rounded-full flex items-center justify-center transition-colors
                         {{ $etapeActuelle >= 2 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-400' }}">
                         @if($etapeActuelle > 2)
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         @else
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span class="text-sm font-bold">2</span>
                         @endif
                     </div>
                     <span class="text-sm font-medium {{ $etapeActuelle >= 2 ? 'text-gray-900' : 'text-gray-400' }}">Périmètre</span>
@@ -54,7 +54,7 @@
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-full flex items-center justify-center transition-colors
                         {{ $etapeActuelle >= 3 ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-400' }}">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span class="text-sm font-bold">3</span>
                     </div>
                     <span class="text-sm font-medium {{ $etapeActuelle >= 3 ? 'text-gray-900' : 'text-gray-400' }}">Équipe</span>
                 </div>
@@ -81,15 +81,15 @@
                                 <label for="annee" class="block text-sm font-medium text-gray-700 mb-1.5">
                                     Année <span class="text-red-500">*</span>
                                 </label>
-                                <livewire:components.searchable-select
-                                    wire:model="annee"
-                                    :options="$this->anneeOptions"
-                                    placeholder="Sélectionner une année"
-                                    search-placeholder="Rechercher..."
-                                    no-results-text="Aucune année disponible"
-                                    :allow-clear="true"
-                                    name="annee"
-                                />
+                                <select
+                                    id="annee"
+                                    wire:model.live="annee"
+                                    class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 sm:text-sm transition-colors @error('annee') border-red-300 ring-red-500/20 @enderror">
+                                    <option value="">Sélectionner une année</option>
+                                    @foreach($this->anneesDisponibles as $a)
+                                        <option value="{{ $a }}">{{ $a }}</option>
+                                    @endforeach
+                                </select>
                                 @error('annee')
                                     <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
@@ -104,7 +104,7 @@
                                 <input
                                     type="date"
                                     id="date_debut"
-                                    wire:model.defer="date_debut"
+                                    wire:model="date_debut"
                                     min="{{ now()->format('Y-m-d') }}"
                                     class="block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 sm:text-sm transition-colors @error('date_debut') border-red-300 ring-red-500/20 @enderror">
                                 @error('date_debut')
@@ -119,7 +119,7 @@
                                 </label>
                                 <textarea
                                     id="observation"
-                                    wire:model.defer="observation"
+                                    wire:model="observation"
                                     rows="3"
                                     maxlength="1000"
                                     placeholder="Notes ou contexte sur cet inventaire..."
@@ -181,7 +181,7 @@
                         @enderror
 
                         {{-- Grille des localisations --}}
-                        <div class="p-6">
+                        <div class="p-6 max-h-[28rem] overflow-y-auto">
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 @forelse($this->localisationsFiltrees as $localisation)
                                     @php
@@ -262,8 +262,8 @@
                             </div>
                         </div>
 
-                        {{-- Liste des assignations --}}
-                        <div class="divide-y divide-gray-100">
+                        {{-- Liste des assignations (scrollable) --}}
+                        <div class="divide-y divide-gray-100 max-h-[32rem] overflow-y-auto">
                             @foreach($this->localisations->whereIn('idLocalisation', $localisationsSelectionnees) as $localisation)
                                 @php
                                     $locId = $localisation->idLocalisation;
@@ -288,11 +288,11 @@
                                                             $ag = $this->agents->firstWhere('idUser', $agId);
                                                         @endphp
                                                         @if($ag)
-                                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                                                                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">{{ mb_substr($ag->users, 0, 1) }}</span>
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                                                <span class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">{{ mb_substr($ag->users, 0, 1) }}</span>
                                                                 {{ $ag->users }}
-                                                                <button type="button" wire:click="retirerAgent({{ $locId }}, {{ $agId }})" class="ml-0.5 hover:text-red-600 transition-colors" title="Retirer">
-                                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                                <button type="button" wire:click="retirerAgent({{ $locId }}, {{ $agId }})" class="ml-0.5 p-0.5 rounded-full hover:bg-red-100 hover:text-red-600 transition-colors" title="Retirer">
+                                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                 </button>
                                                             </span>
                                                         @endif
@@ -304,9 +304,10 @@
                                         </div>
 
                                         {{-- Dropdown multi-select agents --}}
-                                        <div class="sm:w-56 flex-shrink-0" x-data="{ open: false }">
-                                            <button type="button" @click="open = !open" class="w-full flex items-center justify-between gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors">
-                                                <span class="text-gray-500">
+                                        <div class="sm:w-48 flex-shrink-0 relative" x-data="{ open: false }">
+                                            <button type="button" @click="open = !open" class="w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg text-sm transition-colors"
+                                                :class="open ? 'border-indigo-400 bg-indigo-50 ring-2 ring-indigo-500/20' : 'border-gray-300 bg-white hover:bg-gray-50'">
+                                                <span class="text-gray-500 text-xs">
                                                     @if(count($agentsAssignes) > 0)
                                                         {{ count($agentsAssignes) }} agent(s)
                                                     @else
@@ -316,7 +317,7 @@
                                                 <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                                             </button>
                                             <div x-show="open" @click.away="open = false" x-transition x-cloak
-                                                class="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30 max-h-52 overflow-y-auto">
+                                                class="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 max-h-52 overflow-y-auto">
                                                 @foreach($this->agents as $ag)
                                                     @php $isSelected = in_array($ag->idUser, $agentsAssignes); @endphp
                                                     <button
@@ -406,6 +407,48 @@
                                     <p class="text-sm text-gray-600">{{ Str::limit($observation, 100) }}</p>
                                 </div>
                             @endif
+                        </div>
+                    </div>
+
+                    {{-- Checklist de progression --}}
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Checklist</p>
+                        <div class="space-y-2.5">
+                            @php
+                                $step1Ok = !empty($annee) && !empty($date_debut);
+                                $step2Ok = count($localisationsSelectionnees) > 0;
+                                $step3Ok = $this->agentsImpliques > 0;
+                            @endphp
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 {{ $step1Ok ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400' }}">
+                                    @if($step1Ok)
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    @else
+                                        <span class="text-[9px] font-bold">1</span>
+                                    @endif
+                                </div>
+                                <span class="text-sm {{ $step1Ok ? 'text-green-700' : 'text-gray-500' }}">Année & date renseignées</span>
+                            </div>
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 {{ $step2Ok ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400' }}">
+                                    @if($step2Ok)
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    @else
+                                        <span class="text-[9px] font-bold">2</span>
+                                    @endif
+                                </div>
+                                <span class="text-sm {{ $step2Ok ? 'text-green-700' : 'text-gray-500' }}">{{ $this->totalLocalisations }} localisation(s) sélectionnée(s)</span>
+                            </div>
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 {{ $step3Ok ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400' }}">
+                                    @if($step3Ok)
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    @else
+                                        <span class="text-[9px] font-bold">3</span>
+                                    @endif
+                                </div>
+                                <span class="text-sm {{ $step3Ok ? 'text-green-700' : 'text-gray-500' }}">{{ $this->agentsImpliques }} agent(s) assigné(s)</span>
+                            </div>
                         </div>
                     </div>
 
