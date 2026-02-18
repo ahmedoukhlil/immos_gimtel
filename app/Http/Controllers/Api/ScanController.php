@@ -579,6 +579,9 @@ class ScanController extends Controller
             ]);
         }
 
+        // Ajouter l'agent à la table pivot s'il n'y est pas déjà
+        $inventaireLocalisation->agents()->syncWithoutDetaching([$user->idUser]);
+
         // Récupérer tous les biens attendus de cet emplacement
         $biensAttendus = Gesimmo::where('idEmplacement', $idEmplacement)
             ->with(['designation', 'categorie'])

@@ -32,14 +32,20 @@ class DashboardInventaire extends Component
         // Vérifier autorisation (admin ou agent assigné)
         $user = Auth::user();
         
-        if (!$user->isAdmin() && !$inventaire->inventaireLocalisations()->where('user_id', $user->idUser)->exists()) {
+        $hasAccess = $inventaire->inventaireLocalisations()
+            ->where(function ($q) use ($user) {
+                $q->where('user_id', $user->idUser)
+                  ->orWhereHas('agents', fn($sub) => $sub->where('users.idUser', $user->idUser));
+            })->exists();
+
+        if (!$user->isAdmin() && !$hasAccess) {
             abort(403, 'Vous n\'avez pas accès à cet inventaire.');
         }
 
-        // Charger les relations nécessaires dès le départ
         $this->inventaire = $inventaire->load([
             'inventaireLocalisations.localisation',
             'inventaireLocalisations.agent',
+            'inventaireLocalisations.agents',
             'inventaireScans'
         ]);
     }
@@ -158,16 +164,20 @@ class DashboardInventaire extends Component
     public function getInventaireLocalisationsProperty()
     {
         $query = $this->inventaire->inventaireLocalisations()
-            ->with(['localisation', 'agent']);
+            ->with(['localisation', 'agent', 'agents']);
 
         // Filtre par statut
         if ($this->filterStatutLoc !== 'all') {
             $query->where('statut', $this->filterStatutLoc);
         }
 
-        // Filtre par agent
+        // Filtre par agent (vérifie user_id legacy ET la table pivot)
         if ($this->filterAgent !== 'all') {
-            $query->where('user_id', $this->filterAgent);
+            $agentId = $this->filterAgent;
+            $query->where(function ($q) use ($agentId) {
+                $q->where('user_id', $agentId)
+                  ->orWhereHas('agents', fn($sub) => $sub->where('users.idUser', $agentId));
+            });
         }
 
         // Recherche
@@ -204,13 +214,22 @@ class DashboardInventaire extends Component
      */
     public function getAgentsProperty()
     {
-        return $this->inventaire->inventaireLocalisations()
-            ->whereNotNull('user_id')
-            ->with('agent')
-            ->get()
-            ->pluck('agent')
-            ->unique('idUser')
-            ->values();
+        $invLocs = $this->inventaire->inventaireLocalisations()
+            ->with(['agent', 'agents'])
+            ->get();
+
+        $allAgents = collect();
+
+        foreach ($invLocs as $invLoc) {
+            if ($invLoc->agent) {
+                $allAgents->push($invLoc->agent);
+            }
+            foreach ($invLoc->agents as $ag) {
+                $allAgents->push($ag);
+            }
+        }
+
+        return $allAgents->unique('idUser')->values();
     }
 
     /**
@@ -314,9 +333,10 @@ class DashboardInventaire extends Component
             ];
         }
 
-        // Localisations non assignées
+        // Localisations non assignées (ni via user_id legacy, ni via table pivot)
         $nonAssignees = $this->inventaire->inventaireLocalisations()
             ->whereNull('user_id')
+            ->whereDoesntHave('agents')
             ->with('localisation')
             ->get();
         
@@ -359,7 +379,9 @@ class DashboardInventaire extends Component
             ->where('etat_constate', 'defectueux')->count();
         
         $total += $this->inventaire->inventaireLocalisations()
-            ->whereNull('user_id')->count();
+            ->whereNull('user_id')
+            ->whereDoesntHave('agents')
+            ->count();
         
         return $total;
     }
@@ -472,7 +494,7 @@ class DashboardInventaire extends Component
     }
 
     /**
-     * Réassigne une localisation à un agent
+     * Réassigne une localisation à un agent (legacy, remplacé par toggleAgentLocalisation)
      */
     public function reassignerLocalisation($invLocId, $userId): void
     {
@@ -492,9 +514,50 @@ class DashboardInventaire extends Component
             $invLoc->update([
                 'user_id' => $userId ?: null,
             ]);
+            if ($userId) {
+                $invLoc->agents()->syncWithoutDetaching([(int) $userId]);
+            }
             session()->flash('success', 'Localisation réassignée avec succès.');
         } catch (\Exception $e) {
             session()->flash('error', 'Erreur lors de la réassignation: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Ajoute/retire un agent d'une localisation (toggle multi-agent)
+     */
+    public function toggleAgentLocalisation($invLocId, $userId): void
+    {
+        if (!Auth::user()->isAdmin()) {
+            session()->flash('error', 'Seuls les administrateurs peuvent modifier les assignations.');
+            return;
+        }
+
+        $invLoc = InventaireLocalisation::find($invLocId);
+
+        if (!$invLoc || $invLoc->inventaire_id !== $this->inventaire->id) {
+            session()->flash('error', 'Localisation introuvable.');
+            return;
+        }
+
+        try {
+            $userId = (int) $userId;
+            if ($invLoc->agents->contains('idUser', $userId)) {
+                $invLoc->agents()->detach($userId);
+                if ($invLoc->user_id === $userId) {
+                    $remaining = $invLoc->agents()->first();
+                    $invLoc->update(['user_id' => $remaining?->idUser]);
+                }
+            } else {
+                $invLoc->agents()->attach($userId);
+                if (!$invLoc->user_id) {
+                    $invLoc->update(['user_id' => $userId]);
+                }
+            }
+            $invLoc->load('agents');
+            session()->flash('success', 'Assignation mise à jour.');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Erreur: ' . $e->getMessage());
         }
     }
 

@@ -244,29 +244,20 @@
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200">
                         <div class="p-6 border-b border-gray-100">
                             <h2 class="text-lg font-semibold text-gray-900">Assignation des agents</h2>
-                            <p class="text-sm text-gray-500 mt-0.5">Attribuez un agent par localisation. Vous pourrez modifier les assignations plus tard.</p>
+                            <p class="text-sm text-gray-500 mt-0.5">Attribuez un ou plusieurs agents par localisation. Vous pourrez modifier les assignations plus tard.</p>
 
                             {{-- Assignation rapide --}}
                             <div class="mt-4 flex flex-col sm:flex-row gap-3 p-4 bg-indigo-50/50 border border-indigo-100 rounded-xl">
                                 <div class="flex-1">
-                                    <label class="block text-xs font-medium text-indigo-700 mb-1.5">Assignation rapide</label>
-                                    <livewire:components.searchable-select
-                                        wire:model="agentGlobalSelect"
-                                        :options="$this->agentOptions"
-                                        placeholder="Choisir un agent..."
-                                        search-placeholder="Rechercher..."
-                                        no-results-text="Aucun agent"
-                                        :allow-clear="true"
-                                    />
-                                </div>
-                                <div class="flex items-end">
-                                    <button
-                                        type="button"
-                                        wire:click="assignerAgentGlobal({{ $agentGlobalSelect ?: 0 }})"
-                                        @if(!$agentGlobalSelect) disabled @endif
-                                        class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                                        Appliquer à toutes
-                                    </button>
+                                    <label class="block text-xs font-medium text-indigo-700 mb-1.5">Ajouter un agent à toutes les localisations</label>
+                                    <select
+                                        wire:model.live="agentGlobalSelect"
+                                        class="block w-full px-3 py-2.5 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white transition-colors">
+                                        <option value="">Choisir un agent...</option>
+                                        @foreach($this->agents as $ag)
+                                            <option value="{{ $ag->idUser }}">{{ $ag->users }} ({{ $ag->role_name }})</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -275,64 +266,106 @@
                         <div class="divide-y divide-gray-100">
                             @foreach($this->localisations->whereIn('idLocalisation', $localisationsSelectionnees) as $localisation)
                                 @php
-                                    $currentAgentId = isset($assignations[$localisation->idLocalisation]) ? (string)$assignations[$localisation->idLocalisation] : '';
-                                    $agentName = '';
-                                    if ($currentAgentId) {
-                                        $agent = collect($this->agentOptions)->firstWhere('value', $currentAgentId);
-                                        $agentName = $agent['text'] ?? '';
-                                    }
+                                    $locId = $localisation->idLocalisation;
+                                    $agentsAssignes = $assignations[$locId] ?? [];
                                 @endphp
-                                <div wire:key="assign-{{ $localisation->idLocalisation }}" class="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4">
-                                    {{-- Localisation info --}}
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900 truncate">
-                                            {{ $localisation->Localisation }}
-                                        </p>
-                                        <p class="text-xs text-gray-400 mt-0.5">
-                                            {{ $localisation->biens_count ?? 0 }} immobilisation(s)
-                                        </p>
-                                    </div>
+                                <div wire:key="assign-{{ $locId }}" class="px-6 py-4">
+                                    <div class="flex flex-col sm:flex-row sm:items-start gap-3">
+                                        {{-- Localisation info --}}
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-900 truncate">
+                                                {{ $localisation->Localisation }}
+                                            </p>
+                                            <p class="text-xs text-gray-400 mt-0.5">
+                                                {{ $localisation->biens_count ?? 0 }} immobilisation(s)
+                                            </p>
 
-                                    {{-- Agent select --}}
-                                    <div class="sm:w-64 flex-shrink-0">
-                                        @php
-                                            $agentOptionsWithEmpty = array_merge(
-                                                [['value' => '', 'text' => 'Non assigné']],
-                                                array_filter($this->agentOptions, fn($opt) => $opt['value'] !== '')
-                                            );
-                                        @endphp
-                                        <livewire:components.searchable-select
-                                            wire:key="agent-select-{{ $localisation->idLocalisation }}"
-                                            :value="$currentAgentId"
-                                            :options="$agentOptionsWithEmpty"
-                                            placeholder="Non assigné"
-                                            search-placeholder="Rechercher..."
-                                            no-results-text="Aucun agent"
-                                            :allow-clear="true"
-                                            x-on:option-selected.window="$wire.assignerAgent({{ $localisation->idLocalisation }}, $event.detail.value)"
-                                            x-on:option-cleared.window="$wire.assignerAgent({{ $localisation->idLocalisation }}, '')"
-                                        />
+                                            {{-- Tags des agents assignés --}}
+                                            @if(!empty($agentsAssignes))
+                                                <div class="flex flex-wrap gap-1.5 mt-2">
+                                                    @foreach($agentsAssignes as $agId)
+                                                        @php
+                                                            $ag = $this->agents->firstWhere('idUser', $agId);
+                                                        @endphp
+                                                        @if($ag)
+                                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                                                <span class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">{{ mb_substr($ag->users, 0, 1) }}</span>
+                                                                {{ $ag->users }}
+                                                                <button type="button" wire:click="retirerAgent({{ $locId }}, {{ $agId }})" class="ml-0.5 hover:text-red-600 transition-colors" title="Retirer">
+                                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                                </button>
+                                                            </span>
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                            @else
+                                                <p class="text-xs text-amber-500 mt-2 italic">Aucun agent assigné</p>
+                                            @endif
+                                        </div>
+
+                                        {{-- Dropdown multi-select agents --}}
+                                        <div class="sm:w-56 flex-shrink-0" x-data="{ open: false }">
+                                            <button type="button" @click="open = !open" class="w-full flex items-center justify-between gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors">
+                                                <span class="text-gray-500">
+                                                    @if(count($agentsAssignes) > 0)
+                                                        {{ count($agentsAssignes) }} agent(s)
+                                                    @else
+                                                        Assigner...
+                                                    @endif
+                                                </span>
+                                                <svg class="w-4 h-4 text-gray-400 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                            </button>
+                                            <div x-show="open" @click.away="open = false" x-transition x-cloak
+                                                class="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30 max-h-52 overflow-y-auto">
+                                                @foreach($this->agents as $ag)
+                                                    @php $isSelected = in_array($ag->idUser, $agentsAssignes); @endphp
+                                                    <button
+                                                        type="button"
+                                                        wire:click="toggleAgent({{ $locId }}, {{ $ag->idUser }})"
+                                                        class="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-indigo-50 transition-colors {{ $isSelected ? 'bg-indigo-50/60' : '' }}">
+                                                        <div class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0
+                                                            {{ $isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 bg-white' }}">
+                                                            @if($isSelected)
+                                                                <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                                            @endif
+                                                        </div>
+                                                        <div class="flex items-center gap-2 min-w-0">
+                                                            <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                                                <span class="text-[10px] font-bold text-gray-600">{{ mb_substr($ag->users, 0, 1) }}</span>
+                                                            </div>
+                                                            <div class="min-w-0">
+                                                                <p class="text-sm font-medium text-gray-700 truncate">{{ $ag->users }}</p>
+                                                                <p class="text-[10px] text-gray-400">{{ $ag->role_name }}</p>
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             @endforeach
                         </div>
 
                         {{-- Résumé assignations --}}
+                        @php
+                            $locsAssignees = collect($assignations)->filter(fn($agents) => is_array($agents) && count($agents) > 0)->count();
+                        @endphp
                         <div class="p-6 bg-gray-50 border-t border-gray-100 rounded-b-xl">
                             <div class="flex items-center justify-around text-center">
                                 <div>
-                                    <p class="text-2xl font-bold text-indigo-600">{{ count(array_filter($assignations)) }}</p>
+                                    <p class="text-2xl font-bold text-indigo-600">{{ $locsAssignees }}</p>
                                     <p class="text-xs text-gray-500 mt-0.5">Assignée(s)</p>
                                 </div>
                                 <div class="w-px h-8 bg-gray-200"></div>
                                 <div>
-                                    <p class="text-2xl font-bold text-gray-400">{{ $this->totalLocalisations - count(array_filter($assignations)) }}</p>
+                                    <p class="text-2xl font-bold text-gray-400">{{ $this->totalLocalisations - $locsAssignees }}</p>
                                     <p class="text-xs text-gray-500 mt-0.5">Non assignée(s)</p>
                                 </div>
                                 <div class="w-px h-8 bg-gray-200"></div>
                                 <div>
                                     <p class="text-2xl font-bold text-gray-900">{{ $this->agentsImpliques }}</p>
-                                    <p class="text-xs text-gray-500 mt-0.5">Agent(s)</p>
+                                    <p class="text-xs text-gray-500 mt-0.5">Agent(s) distinct(s)</p>
                                 </div>
                             </div>
                         </div>

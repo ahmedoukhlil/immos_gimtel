@@ -18,7 +18,7 @@ class DemarrerInventaire extends Component
     public $date_debut;
     public $observation = '';
     public $localisationsSelectionnees = [];
-    public $assignations = []; // [localisation_id => user_id]
+    public $assignations = []; // [localisation_id => [user_id, user_id, ...]]
     public $agentGlobalSelect = ''; // Pour le select global d'assignation
     public $rechercheLocalisation = ''; // Filtre de recherche pour les localisations
 
@@ -177,11 +177,17 @@ class DemarrerInventaire extends Component
     }
 
     /**
-     * Propriété calculée : Retourne le nombre d'agents impliqués
+     * Propriété calculée : Retourne le nombre d'agents distincts impliqués
      */
     public function getAgentsImpliquesProperty(): int
     {
-        return count(array_filter($this->assignations));
+        $allAgents = [];
+        foreach ($this->assignations as $agents) {
+            if (is_array($agents)) {
+                $allAgents = array_merge($allAgents, $agents);
+            }
+        }
+        return count(array_unique($allAgents));
     }
 
     /**
@@ -271,17 +277,45 @@ class DemarrerInventaire extends Component
     }
 
     /**
-     * Assigne un agent à une localisation
+     * Ajoute ou retire un agent d'une localisation (toggle)
      */
-    public function assignerAgent($localisationId, $userId): void
+    public function toggleAgent($localisationId, $userId): void
     {
         $localisationId = (int) $localisationId;
         $userId = $userId ? (int) $userId : null;
 
-        if (in_array($localisationId, $this->localisationsSelectionnees)) {
-            if ($userId) {
-                $this->assignations[$localisationId] = $userId;
-            } else {
+        if (!$userId || !in_array($localisationId, $this->localisationsSelectionnees)) {
+            return;
+        }
+
+        if (!isset($this->assignations[$localisationId])) {
+            $this->assignations[$localisationId] = [];
+        }
+
+        $index = array_search($userId, $this->assignations[$localisationId]);
+        if ($index !== false) {
+            array_splice($this->assignations[$localisationId], $index, 1);
+            if (empty($this->assignations[$localisationId])) {
+                unset($this->assignations[$localisationId]);
+            }
+        } else {
+            $this->assignations[$localisationId][] = $userId;
+        }
+    }
+
+    /**
+     * Retire un agent spécifique d'une localisation
+     */
+    public function retirerAgent($localisationId, $userId): void
+    {
+        $localisationId = (int) $localisationId;
+        $userId = (int) $userId;
+
+        if (isset($this->assignations[$localisationId])) {
+            $this->assignations[$localisationId] = array_values(
+                array_filter($this->assignations[$localisationId], fn($id) => $id !== $userId)
+            );
+            if (empty($this->assignations[$localisationId])) {
                 unset($this->assignations[$localisationId]);
             }
         }
@@ -294,12 +328,12 @@ class DemarrerInventaire extends Component
     {
         if ($value) {
             $this->assignerAgentGlobal($value);
-            $this->agentGlobalSelect = ''; // Réinitialiser après assignation
+            $this->agentGlobalSelect = '';
         }
     }
 
     /**
-     * Assigne un agent à toutes les localisations non assignées
+     * Ajoute un agent à toutes les localisations sélectionnées (s'il n'y est pas déjà)
      */
     public function assignerAgentGlobal($userId): void
     {
@@ -307,9 +341,14 @@ class DemarrerInventaire extends Component
             return;
         }
 
+        $userId = (int) $userId;
+
         foreach ($this->localisationsSelectionnees as $localisationId) {
             if (!isset($this->assignations[$localisationId])) {
-                $this->assignations[$localisationId] = (int) $userId;
+                $this->assignations[$localisationId] = [];
+            }
+            if (!in_array($userId, $this->assignations[$localisationId])) {
+                $this->assignations[$localisationId][] = $userId;
             }
         }
     }
@@ -364,23 +403,27 @@ class DemarrerInventaire extends Component
                 'observation' => $validated['observation'] ?? null,
             ]);
 
-            // Créer les InventaireLocalisation en utilisant les données pré-calculées
             $localisationsMap = $this->localisations->keyBy('idLocalisation');
 
             foreach ($this->localisationsSelectionnees as $localisationId) {
                 $localisation = $localisationsMap->get($localisationId);
                 
                 if ($localisation) {
-                    $userId = $this->assignations[$localisationId] ?? null;
+                    $agentIds = $this->assignations[$localisationId] ?? [];
+                    $primaryUserId = !empty($agentIds) ? $agentIds[0] : null;
 
-                    InventaireLocalisation::create([
+                    $invLoc = InventaireLocalisation::create([
                         'inventaire_id' => $inventaire->id,
                         'localisation_id' => $localisationId,
                         'statut' => 'en_attente',
-                        'user_id' => $userId,
+                        'user_id' => $primaryUserId,
                         'nombre_biens_attendus' => $localisation->biens_count ?? 0,
                         'nombre_biens_scannes' => 0,
                     ]);
+
+                    if (!empty($agentIds)) {
+                        $invLoc->agents()->sync($agentIds);
+                    }
                 }
             }
 

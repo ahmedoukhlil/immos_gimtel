@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -51,11 +52,20 @@ class InventaireLocalisation extends Model
     }
 
     /**
-     * Relation avec l'agent assigné
+     * Relation avec l'agent assigné (legacy, premier agent ou dernier scanner)
      */
     public function agent(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'idUser');
+    }
+
+    /**
+     * Relation many-to-many avec les agents assignés
+     */
+    public function agents(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'inventaire_localisation_user', 'inventaire_localisation_id', 'user_id', 'id', 'idUser')
+            ->withTimestamps();
     }
 
     /**
@@ -87,11 +97,14 @@ class InventaireLocalisation extends Model
     }
 
     /**
-     * Scope pour filtrer par agent
+     * Scope pour filtrer par agent (vérifie la table pivot ET le champ legacy user_id)
      */
     public function scopeByAgent(Builder $query, int $userId): Builder
     {
-        return $query->where('user_id', $userId);
+        return $query->where(function ($q) use ($userId) {
+            $q->where('user_id', $userId)
+              ->orWhereHas('agents', fn($sub) => $sub->where('users.idUser', $userId));
+        });
     }
 
     /**
