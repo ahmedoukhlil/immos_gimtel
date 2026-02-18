@@ -332,123 +332,194 @@
     {{-- ========================================== --}}
     {{-- TABLEAU LOCALISATIONS                       --}}
     {{-- ========================================== --}}
+    @php
+        $allInvLocs = $this->inventaireLocalisations;
+        $countByStatut = [
+            'en_attente' => $inventaire->inventaireLocalisations->where('statut', 'en_attente')->count(),
+            'en_cours'   => $inventaire->inventaireLocalisations->where('statut', 'en_cours')->count(),
+            'termine'    => $inventaire->inventaireLocalisations->where('statut', 'termine')->count(),
+        ];
+        $totalLocs = $inventaire->inventaireLocalisations->count();
+        $hasActiveFilters = $searchLoc || $filterStatutLoc !== 'all' || $filterAgent !== 'all';
+    @endphp
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <div class="flex flex-col gap-3">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <h2 class="text-base font-semibold text-gray-900">Localisations</h2>
-                        <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{{ $this->inventaireLocalisations->count() }}</span>
-                    </div>
+        {{-- Header --}}
+        <div class="px-5 py-4 border-b border-gray-100">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-3">
+                    <h2 class="text-base font-semibold text-gray-900">Localisations</h2>
+                    <span class="text-xs text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full font-medium tabular-nums">{{ $totalLocs }}</span>
                 </div>
-                <div class="flex flex-col sm:flex-row gap-2">
-                    <div class="relative flex-1">
-                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                        <input type="text" wire:model.live.debounce.300ms="searchLoc" placeholder="Rechercher une localisation..." class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                    </div>
-                    <select wire:model.live="filterStatutLoc" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="all">Tous les statuts</option>
-                        <option value="en_attente">En attente</option>
-                        <option value="en_cours">En cours</option>
-                        <option value="termine">Terminées</option>
-                    </select>
-                    <select wire:model.live="filterAgent" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="all">Tous les agents</option>
-                        @foreach($this->agents as $agent)
-                            <option value="{{ $agent->idUser }}">{{ $agent->users ?? 'Agent' }}</option>
-                        @endforeach
-                    </select>
+                <div class="flex items-center gap-1.5">
+                    <button wire:click="$set('filterStatutLoc', 'all')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all {{ $filterStatutLoc === 'all' ? 'bg-gray-900 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                        Tous
+                    </button>
+                    <button wire:click="$set('filterStatutLoc', 'en_attente')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all {{ $filterStatutLoc === 'en_attente' ? 'bg-gray-600 text-white shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100' }}">
+                        <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                        Attente <span class="tabular-nums opacity-70">{{ $countByStatut['en_attente'] }}</span>
+                    </button>
+                    <button wire:click="$set('filterStatutLoc', 'en_cours')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all {{ $filterStatutLoc === 'en_cours' ? 'bg-blue-600 text-white shadow-sm' : 'bg-blue-50 text-blue-600 hover:bg-blue-100' }}">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                        En cours <span class="tabular-nums opacity-70">{{ $countByStatut['en_cours'] }}</span>
+                    </button>
+                    <button wire:click="$set('filterStatutLoc', 'termine')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all {{ $filterStatutLoc === 'termine' ? 'bg-green-600 text-white shadow-sm' : 'bg-green-50 text-green-600 hover:bg-green-100' }}">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                        Terminées <span class="tabular-nums opacity-70">{{ $countByStatut['termine'] }}</span>
+                    </button>
                 </div>
             </div>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <div class="relative flex-1">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <input type="text" wire:model.live.debounce.300ms="searchLoc" placeholder="Rechercher par code ou nom..." class="w-full pl-9 pr-8 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all">
+                    @if($searchLoc)
+                        <button wire:click="$set('searchLoc', '')" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    @endif
+                </div>
+                <select wire:model.live="filterAgent" class="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all sm:w-48">
+                    <option value="all">Tous les agents</option>
+                    @foreach($this->agents as $agent)
+                        <option value="{{ $agent->idUser }}">{{ $agent->users ?? 'Agent' }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @if($hasActiveFilters)
+                <div class="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-gray-100">
+                    <span class="text-[11px] text-gray-400">Filtres :</span>
+                    @if($searchLoc)
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-indigo-50 text-indigo-700 font-medium">
+                            "{{ $searchLoc }}"
+                            <button wire:click="$set('searchLoc', '')" class="hover:text-indigo-900 transition-colors"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        </span>
+                    @endif
+                    @if($filterAgent !== 'all')
+                        @php $selectedAgent = $this->agents->firstWhere('idUser', $filterAgent); @endphp
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-indigo-50 text-indigo-700 font-medium">
+                            {{ $selectedAgent->users ?? 'Agent' }}
+                            <button wire:click="$set('filterAgent', 'all')" class="hover:text-indigo-900 transition-colors"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                        </span>
+                    @endif
+                    <button wire:click="$set('searchLoc', ''); $set('filterStatutLoc', 'all'); $set('filterAgent', 'all')" class="ml-auto text-[11px] text-gray-400 hover:text-red-500 transition-colors font-medium">
+                        Tout effacer
+                    </button>
+                </div>
+            @endif
         </div>
 
         <div class="relative">
-            <div wire:loading.flex wire:target="searchLoc, filterStatutLoc, filterAgent, sortBy, toggleAgentLocalisation" class="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 items-center justify-center">
-                <div class="flex items-center gap-2 text-indigo-600 text-sm">
-                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                    Chargement...
+            <div wire:loading.flex wire:target="searchLoc, filterStatutLoc, filterAgent, sortBy, toggleAgentLocalisation" class="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-20 items-center justify-center">
+                <div class="flex items-center gap-2.5 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200">
+                    <svg class="w-4 h-4 animate-spin text-indigo-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    <span class="text-sm text-gray-600">Chargement...</span>
                 </div>
             </div>
 
             {{-- Vue desktop --}}
-            <div class="hidden md:block overflow-x-auto max-h-[32rem] overflow-y-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0 z-[5]">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" wire:click="sortBy('code')">
+            <div class="hidden md:block overflow-x-auto max-h-[36rem] overflow-y-auto">
+                <table class="min-w-full">
+                    <thead class="sticky top-0 z-[5]">
+                        <tr class="bg-gray-50/95 backdrop-blur-sm border-b border-gray-200">
+                            <th class="px-5 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors select-none" wire:click="sortBy('code')">
                                 <div class="flex items-center gap-1">
                                     Code
-                                    @if($sortField === 'code')
-                                        <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $sortDirection === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7' }}"/></svg>
-                                    @endif
+                                    <span class="flex flex-col">
+                                        <svg class="w-2.5 h-2.5 {{ $sortField === 'code' && $sortDirection === 'asc' ? 'text-indigo-600' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3l7 7H3l7-7z"/></svg>
+                                        <svg class="w-2.5 h-2.5 -mt-0.5 {{ $sortField === 'code' && $sortDirection === 'desc' ? 'text-indigo-600' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20"><path d="M10 17l-7-7h14l-7 7z"/></svg>
+                                    </span>
                                 </div>
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Désignation</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progression</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent(s)</th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20"></th>
+                            <th class="px-5 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Désignation</th>
+                            <th class="px-5 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Statut</th>
+                            <th class="px-5 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors select-none" wire:click="sortBy('progression')">
+                                <div class="flex items-center gap-1">
+                                    Progression
+                                    <span class="flex flex-col">
+                                        <svg class="w-2.5 h-2.5 {{ $sortField === 'progression' && $sortDirection === 'asc' ? 'text-indigo-600' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3l7 7H3l7-7z"/></svg>
+                                        <svg class="w-2.5 h-2.5 -mt-0.5 {{ $sortField === 'progression' && $sortDirection === 'desc' ? 'text-indigo-600' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20"><path d="M10 17l-7-7h14l-7 7z"/></svg>
+                                    </span>
+                                </div>
+                            </th>
+                            <th class="px-5 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Agent(s)</th>
+                            <th class="px-5 py-2.5 w-10"></th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-100">
-                        @forelse($this->inventaireLocalisations as $invLoc)
+                    <tbody class="divide-y divide-gray-50">
+                        @forelse($allInvLocs as $invLoc)
                             @php
                                 $progression = $invLoc->nombre_biens_attendus > 0 ? round(($invLoc->nombre_biens_scannes / $invLoc->nombre_biens_attendus) * 100, 1) : 0;
-                                $progressionColor = $progression >= 100 ? 'bg-green-500' : ($progression >= 50 ? 'bg-indigo-500' : 'bg-indigo-300');
                                 $allAgents = $invLoc->agents->isNotEmpty() ? $invLoc->agents : ($invLoc->agent ? collect([$invLoc->agent]) : collect());
+                                $rowBorderColor = match($invLoc->statut) {
+                                    'termine' => 'border-l-green-500',
+                                    'en_cours' => 'border-l-blue-500',
+                                    default => 'border-l-gray-200',
+                                };
+                                $progressBarColor = $progression >= 100 ? 'bg-green-500' : ($progression >= 50 ? 'bg-blue-500' : ($progression > 0 ? 'bg-indigo-400' : 'bg-gray-200'));
+                                $progressTextColor = $progression >= 100 ? 'text-green-700 font-semibold' : ($progression > 0 ? 'text-gray-700' : 'text-gray-400');
                             @endphp
-                            <tr class="hover:bg-gray-50/50 transition-colors">
-                                <td class="px-6 py-3.5 whitespace-nowrap">
-                                    <span class="text-sm font-semibold text-gray-900">{{ $invLoc->localisation->CodeLocalisation ?? 'N/A' }}</span>
+                            <tr class="group hover:bg-indigo-50/30 transition-colors border-l-[3px] {{ $rowBorderColor }}">
+                                <td class="px-5 py-3 whitespace-nowrap">
+                                    <span class="text-sm font-mono font-semibold text-gray-900">{{ $invLoc->localisation->CodeLocalisation ?? 'N/A' }}</span>
                                 </td>
-                                <td class="px-6 py-3.5">
-                                    <span class="text-sm text-gray-600 max-w-[220px] truncate block" title="{{ $invLoc->localisation->Localisation ?? '' }}">{{ $invLoc->localisation->Localisation ?? 'N/A' }}</span>
+                                <td class="px-5 py-3">
+                                    <a href="{{ route('localisations.show', $invLoc->localisation) }}" class="text-sm text-gray-700 hover:text-indigo-600 transition-colors max-w-[240px] truncate block" title="{{ $invLoc->localisation->Localisation ?? '' }}">
+                                        {{ $invLoc->localisation->Localisation ?? 'N/A' }}
+                                    </a>
                                 </td>
-                                <td class="px-6 py-3.5 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium {{ $statutsLoc[$invLoc->statut]['color'] ?? 'bg-gray-100 text-gray-700' }}">
+                                <td class="px-5 py-3 whitespace-nowrap">
+                                    @php
+                                        $statutIcon = match($invLoc->statut) {
+                                            'termine' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
+                                            'en_cours' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>',
+                                            default => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+                                        };
+                                    @endphp
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium {{ $statutsLoc[$invLoc->statut]['color'] ?? 'bg-gray-100 text-gray-700' }}">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">{!! $statutIcon !!}</svg>
                                         {{ $statutsLoc[$invLoc->statut]['label'] ?? $invLoc->statut }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-3.5 whitespace-nowrap">
-                                    <div class="flex items-center gap-2.5">
-                                        <div class="w-20 bg-gray-100 rounded-full h-1.5">
-                                            <div class="{{ $progressionColor }} h-1.5 rounded-full transition-all" style="width: {{ min($progression, 100) }}%"></div>
+                                <td class="px-5 py-3 whitespace-nowrap">
+                                    <div class="flex items-center gap-3 min-w-[160px]">
+                                        <div class="flex-1 max-w-[100px] bg-gray-100 rounded-full h-2 overflow-hidden">
+                                            <div class="{{ $progressBarColor }} h-2 rounded-full transition-all duration-500" style="width: {{ min($progression, 100) }}%"></div>
                                         </div>
-                                        <span class="text-xs tabular-nums {{ $progression >= 100 ? 'text-green-600 font-semibold' : 'text-gray-500' }}">
-                                            {{ $invLoc->nombre_biens_scannes }}/{{ $invLoc->nombre_biens_attendus }}
+                                        <span class="text-xs tabular-nums {{ $progressTextColor }} min-w-[60px]">
+                                            <span class="font-semibold">{{ number_format($progression, 0) }}%</span>
+                                            <span class="text-gray-400 text-[10px] ml-0.5">{{ $invLoc->nombre_biens_scannes }}/{{ $invLoc->nombre_biens_attendus }}</span>
                                         </span>
                                     </div>
                                 </td>
-                                <td class="px-6 py-3.5">
-                                    <div class="flex flex-wrap items-center gap-1">
-                                        @forelse($allAgents->take(2) as $ag)
-                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700">
-                                                <span class="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0">{{ mb_substr($ag->users ?? '?', 0, 1) }}</span>
-                                                {{ $ag->users ?? 'Agent' }}
-                                            </span>
-                                        @empty
-                                            <span class="text-[11px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Non assigné</span>
-                                        @endforelse
-                                        @if($allAgents->count() > 2)
-                                            <span class="text-[10px] text-gray-400">+{{ $allAgents->count() - 2 }}</span>
+                                <td class="px-5 py-3">
+                                    <div class="flex items-center gap-1.5">
+                                        @if($allAgents->isNotEmpty())
+                                            <div class="flex -space-x-1.5">
+                                                @foreach($allAgents->take(3) as $ag)
+                                                    <span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold ring-2 ring-white" title="{{ $ag->users ?? 'Agent' }}">{{ mb_substr($ag->users ?? '?', 0, 1) }}</span>
+                                                @endforeach
+                                                @if($allAgents->count() > 3)
+                                                    <span class="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[9px] font-bold ring-2 ring-white" title="{{ $allAgents->count() - 3 }} de plus">+{{ $allAgents->count() - 3 }}</span>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">Non assigné</span>
                                         @endif
                                         @if($isAdmin)
                                             <div x-data="{ open: false }" class="relative" @click.away="open = false">
-                                                <button @click.stop="open = !open" class="p-1 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Gérer les agents">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                                <button @click.stop="open = !open" class="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all" title="Gérer les agents">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                                                 </button>
-                                                <div x-show="open" x-transition x-cloak class="absolute right-0 mt-1 w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[60] max-h-60 overflow-y-auto">
-                                                    <p class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase border-b border-gray-100 mb-1">Assigner agents</p>
+                                                <div x-show="open" x-transition.origin.top.right x-cloak class="absolute right-0 mt-1.5 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-[60] max-h-64 overflow-y-auto">
+                                                    <p class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 mb-1">Assigner agents</p>
                                                     @foreach($this->agentsDisponibles as $agent)
                                                         @php $isAssigned = $allAgents->contains('idUser', $agent->idUser); @endphp
-                                                        <button wire:click="toggleAgentLocalisation({{ $invLoc->id }}, {{ $agent->idUser }})" @click.stop class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-indigo-50 transition-colors {{ $isAssigned ? 'bg-indigo-50/60' : 'text-gray-700' }}">
+                                                        <button wire:click="toggleAgentLocalisation({{ $invLoc->id }}, {{ $agent->idUser }})" @click.stop class="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors {{ $isAssigned ? 'bg-indigo-50/50' : 'text-gray-700' }}">
                                                             <div class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors {{ $isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300' }}">
                                                                 @if($isAssigned)<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>@endif
                                                             </div>
-                                                            <span class="truncate {{ $isAssigned ? 'text-indigo-700 font-medium' : '' }}">{{ $agent->users ?? 'Agent' }}</span>
-                                                            @if($isAssigned)
-                                                                <span class="ml-auto text-[9px] text-indigo-400">assigné</span>
-                                                            @endif
+                                                            <span class="w-5 h-5 rounded-full {{ $isAssigned ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500' }} flex items-center justify-center text-[9px] font-bold flex-shrink-0">{{ mb_substr($agent->users ?? '?', 0, 1) }}</span>
+                                                            <span class="truncate flex-1 {{ $isAssigned ? 'text-indigo-700 font-medium' : '' }}">{{ $agent->users ?? 'Agent' }}</span>
                                                         </button>
                                                     @endforeach
                                                 </div>
@@ -456,17 +527,28 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td class="px-6 py-3.5 whitespace-nowrap text-right">
-                                    <a href="{{ route('localisations.show', $invLoc->localisation) }}" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Détails</a>
+                                <td class="px-3 py-3 text-right">
+                                    <a href="{{ route('localisations.show', $invLoc->localisation) }}" class="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-indigo-600 font-medium opacity-0 group-hover:opacity-100 transition-all">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                    </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-6 py-12 text-center">
-                                    <p class="text-sm text-gray-500">Aucune localisation trouvée</p>
-                                    @if($searchLoc || $filterStatutLoc !== 'all' || $filterAgent !== 'all')
-                                        <button wire:click="$set('searchLoc', ''); $set('filterStatutLoc', 'all'); $set('filterAgent', 'all')" class="mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-medium">Réinitialiser les filtres</button>
-                                    @endif
+                                <td colspan="6" class="px-6 py-16 text-center">
+                                    <div class="flex flex-col items-center gap-2">
+                                        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-1">
+                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                                        </div>
+                                        <p class="text-sm text-gray-500 font-medium">Aucune localisation trouvée</p>
+                                        @if($hasActiveFilters)
+                                            <p class="text-xs text-gray-400">Essayez de modifier vos critères de recherche</p>
+                                            <button wire:click="$set('searchLoc', ''); $set('filterStatutLoc', 'all'); $set('filterAgent', 'all')" class="mt-1 inline-flex items-center gap-1 px-3 py-1.5 text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-lg font-medium transition-colors">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                                Réinitialiser les filtres
+                                            </button>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforelse
@@ -475,51 +557,66 @@
             </div>
 
             {{-- Vue mobile (cards) --}}
-            <div class="md:hidden divide-y divide-gray-100 max-h-[32rem] overflow-y-auto">
-                @forelse($this->inventaireLocalisations as $invLoc)
+            <div class="md:hidden max-h-[36rem] overflow-y-auto">
+                @forelse($allInvLocs as $invLoc)
                     @php
                         $progression = $invLoc->nombre_biens_attendus > 0 ? round(($invLoc->nombre_biens_scannes / $invLoc->nombre_biens_attendus) * 100, 1) : 0;
-                        $progressionColor = $progression >= 100 ? 'bg-green-500' : ($progression >= 50 ? 'bg-indigo-500' : 'bg-indigo-300');
                         $allAgents = $invLoc->agents->isNotEmpty() ? $invLoc->agents : ($invLoc->agent ? collect([$invLoc->agent]) : collect());
+                        $cardBorder = match($invLoc->statut) {
+                            'termine' => 'border-l-green-500 bg-green-50/20',
+                            'en_cours' => 'border-l-blue-500 bg-blue-50/20',
+                            default => 'border-l-gray-300',
+                        };
+                        $progressBarColor = $progression >= 100 ? 'bg-green-500' : ($progression >= 50 ? 'bg-blue-500' : ($progression > 0 ? 'bg-indigo-400' : 'bg-gray-200'));
                     @endphp
-                    <div class="px-5 py-4 hover:bg-gray-50 transition-colors">
-                        <a href="{{ route('localisations.show', $invLoc->localisation) }}" class="block">
-                            <div class="flex items-start justify-between gap-3 mb-2">
-                                <div class="min-w-0">
+                    <div class="border-b border-gray-100 border-l-[3px] {{ $cardBorder }} hover:bg-gray-50/50 transition-colors">
+                        <a href="{{ route('localisations.show', $invLoc->localisation) }}" class="block px-4 pt-3.5 pb-2">
+                            <div class="flex items-start justify-between gap-3 mb-2.5">
+                                <div class="min-w-0 flex-1">
                                     <p class="text-sm font-semibold text-gray-900 truncate">{{ $invLoc->localisation->Localisation ?? 'N/A' }}</p>
-                                    <p class="text-xs text-gray-400">{{ $invLoc->localisation->CodeLocalisation ?? '' }}</p>
+                                    <p class="text-[11px] font-mono text-gray-400 mt-0.5">{{ $invLoc->localisation->CodeLocalisation ?? '' }}</p>
                                 </div>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0 {{ $statutsLoc[$invLoc->statut]['color'] ?? 'bg-gray-100 text-gray-700' }}">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium flex-shrink-0 {{ $statutsLoc[$invLoc->statut]['color'] ?? 'bg-gray-100 text-gray-700' }}">
                                     {{ $statutsLoc[$invLoc->statut]['label'] ?? $invLoc->statut }}
                                 </span>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <div class="flex-1 bg-gray-100 rounded-full h-1.5">
-                                    <div class="{{ $progressionColor }} h-1.5 rounded-full" style="width: {{ min($progression, 100) }}%"></div>
+                            <div class="flex items-center gap-3 mb-1">
+                                <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                    <div class="{{ $progressBarColor }} h-2 rounded-full transition-all" style="width: {{ min($progression, 100) }}%"></div>
                                 </div>
-                                <span class="text-xs tabular-nums text-gray-500 flex-shrink-0">{{ $invLoc->nombre_biens_scannes }}/{{ $invLoc->nombre_biens_attendus }}</span>
+                                <div class="flex items-baseline gap-1 flex-shrink-0">
+                                    <span class="text-xs tabular-nums font-semibold {{ $progression >= 100 ? 'text-green-600' : 'text-gray-700' }}">{{ number_format($progression, 0) }}%</span>
+                                    <span class="text-[10px] tabular-nums text-gray-400">{{ $invLoc->nombre_biens_scannes }}/{{ $invLoc->nombre_biens_attendus }}</span>
+                                </div>
                             </div>
                         </a>
-                        <div class="flex flex-wrap items-center gap-1 mt-2">
-                            @forelse($allAgents as $ag)
-                                <span class="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full">{{ $ag->users ?? 'Agent' }}</span>
-                            @empty
-                                <span class="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Non assigné</span>
-                            @endforelse
+                        <div class="flex items-center gap-1.5 px-4 pb-3">
+                            @if($allAgents->isNotEmpty())
+                                <div class="flex -space-x-1">
+                                    @foreach($allAgents->take(3) as $ag)
+                                        <span class="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[8px] font-bold ring-2 ring-white" title="{{ $ag->users ?? 'Agent' }}">{{ mb_substr($ag->users ?? '?', 0, 1) }}</span>
+                                    @endforeach
+                                </div>
+                                <span class="text-[10px] text-gray-500">
+                                    {{ $allAgents->pluck('users')->take(2)->join(', ') }}{{ $allAgents->count() > 2 ? ' +'.($allAgents->count() - 2) : '' }}
+                                </span>
+                            @else
+                                <span class="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">Non assigné</span>
+                            @endif
                             @if($isAdmin)
-                                <div x-data="{ open: false }" class="relative" @click.away="open = false">
-                                    <button @click.stop="open = !open" class="p-1 rounded text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Gérer les agents">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                <div x-data="{ open: false }" class="relative ml-auto" @click.away="open = false">
+                                    <button @click.stop="open = !open" class="w-6 h-6 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 hover:border-indigo-400 hover:text-indigo-600 transition-all" title="Gérer les agents">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                                     </button>
-                                    <div x-show="open" x-transition x-cloak class="absolute left-0 bottom-full mb-1 w-52 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[60] max-h-60 overflow-y-auto">
-                                        <p class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase border-b border-gray-100 mb-1">Assigner agents</p>
+                                    <div x-show="open" x-transition.origin.bottom.right x-cloak class="absolute right-0 bottom-full mb-1.5 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-[60] max-h-64 overflow-y-auto">
+                                        <p class="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 mb-1">Assigner agents</p>
                                         @foreach($this->agentsDisponibles as $agent)
                                             @php $isAssigned = $allAgents->contains('idUser', $agent->idUser); @endphp
-                                            <button wire:click="toggleAgentLocalisation({{ $invLoc->id }}, {{ $agent->idUser }})" @click.stop class="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm hover:bg-indigo-50 transition-colors {{ $isAssigned ? 'bg-indigo-50/60' : 'text-gray-700' }}">
+                                            <button wire:click="toggleAgentLocalisation({{ $invLoc->id }}, {{ $agent->idUser }})" @click.stop class="w-full flex items-center gap-2.5 text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors {{ $isAssigned ? 'bg-indigo-50/50' : 'text-gray-700' }}">
                                                 <div class="w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors {{ $isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300' }}">
                                                     @if($isAssigned)<svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>@endif
                                                 </div>
-                                                <span class="truncate {{ $isAssigned ? 'text-indigo-700 font-medium' : '' }}">{{ $agent->users ?? 'Agent' }}</span>
+                                                <span class="truncate flex-1 {{ $isAssigned ? 'text-indigo-700 font-medium' : '' }}">{{ $agent->users ?? 'Agent' }}</span>
                                             </button>
                                         @endforeach
                                     </div>
@@ -528,12 +625,34 @@
                         </div>
                     </div>
                 @empty
-                    <div class="px-5 py-12 text-center">
-                        <p class="text-sm text-gray-500">Aucune localisation trouvée</p>
+                    <div class="px-5 py-16 text-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-1">
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                            </div>
+                            <p class="text-sm text-gray-500">Aucune localisation trouvée</p>
+                            @if($hasActiveFilters)
+                                <button wire:click="$set('searchLoc', ''); $set('filterStatutLoc', 'all'); $set('filterAgent', 'all')" class="mt-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium">Réinitialiser les filtres</button>
+                            @endif
+                        </div>
                     </div>
                 @endforelse
             </div>
         </div>
+
+        {{-- Footer avec compteur --}}
+        @if($allInvLocs->isNotEmpty())
+            <div class="px-5 py-2.5 bg-gray-50/50 border-t border-gray-100 flex items-center justify-between">
+                <p class="text-[11px] text-gray-400">
+                    Affichage de <span class="font-semibold text-gray-600">{{ $allInvLocs->count() }}</span>
+                    @if($hasActiveFilters) sur <span class="font-semibold text-gray-600">{{ $totalLocs }}</span> @endif
+                    localisation{{ $allInvLocs->count() > 1 ? 's' : '' }}
+                </p>
+                @if($allInvLocs->count() > 10)
+                    <p class="text-[10px] text-gray-400">Faites défiler pour voir plus</p>
+                @endif
+            </div>
+        @endif
     </div>
 
     {{-- ========================================== --}}

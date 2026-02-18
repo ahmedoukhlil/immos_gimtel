@@ -189,14 +189,20 @@ class DashboardInventaire extends Component
             });
         }
 
-        // Récupérer les résultats
         $results = $query->get();
 
-        // Tri manuel si nécessaire (pour le code de localisation)
+        $isDesc = $this->sortDirection === 'desc';
+
         if ($this->sortField === 'code') {
             $results = $results->sortBy(function ($invLoc) {
                 return $invLoc->localisation->CodeLocalisation ?? $invLoc->localisation->Localisation ?? '';
-            }, SORT_REGULAR, $this->sortDirection === 'desc');
+            }, SORT_REGULAR, $isDesc);
+        } elseif ($this->sortField === 'progression') {
+            $results = $results->sortBy(function ($invLoc) {
+                return $invLoc->nombre_biens_attendus > 0
+                    ? ($invLoc->nombre_biens_scannes / $invLoc->nombre_biens_attendus)
+                    : 0;
+            }, SORT_NUMERIC, $isDesc);
         }
 
         return $results->values();
