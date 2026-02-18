@@ -258,51 +258,35 @@
 
                                 if (slot === 0) {
                                     // ══════ PREMIÈRE ÉTIQUETTE : QR CODE EMPLACEMENT ══════
-                                    const qrSize = 18.0 * mm;
-                                    const padding = 2.0 * mm;
-                                    const qrX = labelX + padding;
-                                    const qrY = labelTopY - (this.LABEL_H - qrSize) / 2 - qrSize;
+                                    // Même layout que les barcodes : image en haut (zone 4mm→12mm),
+                                    // texte 1 centré à 15.5mm, texte 2 centré à 19mm
+                                    const qrSize = BC_HEIGHT; // 8mm, même hauteur que les barcodes
+                                    const qrX = labelX + (this.LABEL_W - qrSize) / 2;
+                                    const qrY = labelTopY - BC_TOP_OFFSET - qrSize;
                                     page.drawImage(qrImg, { x: qrX, y: qrY, width: qrSize, height: qrSize });
 
-                                    // Texte à droite du QR
-                                    const textX = qrX + qrSize + 3.0 * mm;
-                                    const textMaxW = labelX + this.LABEL_W - textX - padding;
-
-                                    // Nom de l'emplacement (gras, taille 6.5)
-                                    const FS_EMP = 6.5;
+                                    // Nom de l'emplacement (centré, même position que code_formate)
                                     let empText = this.emplacementName;
-                                    while (fontBold.widthOfTextAtSize(empText, FS_EMP) > textMaxW && empText.length > 1) {
+                                    const maxEmpW = this.LABEL_W * 0.92;
+                                    while (fontBold.widthOfTextAtSize(empText, FS_CODE) > maxEmpW && empText.length > 1) {
                                         empText = empText.slice(0, -1);
                                     }
                                     if (empText.length < this.emplacementName.length) empText += '…';
+                                    const empTw = fontBold.widthOfTextAtSize(empText, FS_CODE);
                                     page.drawText(empText, {
-                                        x: textX,
-                                        y: labelTopY - 9.0 * mm,
-                                        size: FS_EMP, font: fontBold,
+                                        x: labelX + (this.LABEL_W - empTw) / 2,
+                                        y: labelTopY - CODE_Y_OFFSET,
+                                        size: FS_CODE, font: fontBold,
                                         color: PDFLib.rgb(0, 0, 0)
                                     });
 
-                                    // Localisation (taille 5)
-                                    if (this.localisationName) {
-                                        let locText = this.localisationName;
-                                        while (font.widthOfTextAtSize(locText, 5) > textMaxW && locText.length > 1) {
-                                            locText = locText.slice(0, -1);
-                                        }
-                                        if (locText.length < this.localisationName.length) locText += '…';
-                                        page.drawText(locText, {
-                                            x: textX,
-                                            y: labelTopY - 13.5 * mm,
-                                            size: 5, font,
-                                            color: PDFLib.rgb(0.3, 0.3, 0.3)
-                                        });
-                                    }
-
-                                    // Code EMP-id (taille 4.5)
+                                    // Code EMP-id (centré, même position que désignation)
+                                    const empCodeTw = font.widthOfTextAtSize(qrContent, FS_DESIG);
                                     page.drawText(qrContent, {
-                                        x: textX,
-                                        y: labelTopY - 17.5 * mm,
-                                        size: 4.5, font,
-                                        color: PDFLib.rgb(0.4, 0.4, 0.4)
+                                        x: labelX + (this.LABEL_W - empCodeTw) / 2,
+                                        y: labelTopY - DESIG_Y_OFFSET,
+                                        size: FS_DESIG, font,
+                                        color: PDFLib.rgb(0.3, 0.3, 0.3)
                                     });
 
                                     continue;
