@@ -3,6 +3,8 @@
 namespace App\Livewire\Inventaires;
 
 use App\Models\Inventaire;
+use App\Models\InventaireLocalisation;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -14,11 +16,15 @@ class ListeInventaires extends Component
     /**
      * Propriétés publiques pour les filtres et le tri
      */
-    public $filterStatut = 'all'; // all, en_preparation, en_cours, termine, cloture
+    public $filterStatut = 'all';
     public $filterAnnee = '';
     public $sortField = 'annee';
     public $sortDirection = 'desc';
     public $perPage = 10;
+
+    public $showAgentsModal = false;
+    public $modalInventaireId = null;
+    public $modalInventaireAnnee = null;
 
     /**
      * Initialisation du composant
@@ -164,6 +170,113 @@ class ListeInventaires extends Component
         } catch (\Exception $e) {
             session()->flash('error', 'Erreur lors de la suppression: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Ouvre la modale de gestion des agents pour un inventaire
+     */
+    public function ouvrirModalAgents($inventaireId): void
+    {
+        if (!Auth::user()->isAdmin()) {
+            return;
+        }
+
+        $inventaire = Inventaire::find($inventaireId);
+        if (!$inventaire || !in_array($inventaire->statut, ['en_cours', 'en_preparation'])) {
+            session()->flash('error', 'Inventaire introuvable ou non modifiable.');
+            return;
+        }
+
+        $this->modalInventaireId = $inventaireId;
+        $this->modalInventaireAnnee = $inventaire->annee;
+        $this->showAgentsModal = true;
+    }
+
+    /**
+     * Ferme la modale
+     */
+    public function fermerModalAgents(): void
+    {
+        $this->showAgentsModal = false;
+        $this->modalInventaireId = null;
+        $this->modalInventaireAnnee = null;
+    }
+
+    /**
+     * Retourne les localisations de l'inventaire ouvert dans la modale
+     */
+    public function getModalLocalisationsProperty()
+    {
+        if (!$this->modalInventaireId) {
+            return collect();
+        }
+
+        return InventaireLocalisation::where('inventaire_id', $this->modalInventaireId)
+            ->with(['localisation', 'agents'])
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * Retourne tous les agents disponibles
+     */
+    public function getAllAgentsProperty()
+    {
+        return User::whereIn('role', ['agent', 'admin'])
+            ->orderBy('users')
+            ->get();
+    }
+
+    /**
+     * Toggle un agent sur une localisation d'inventaire
+     */
+    public function toggleAgentLoc($invLocId, $userId): void
+    {
+        if (!Auth::user()->isAdmin()) {
+            return;
+        }
+
+        $invLoc = InventaireLocalisation::find($invLocId);
+        if (!$invLoc || $invLoc->inventaire_id !== $this->modalInventaireId) {
+            return;
+        }
+
+        $userId = (int) $userId;
+
+        if ($invLoc->agents->contains('idUser', $userId)) {
+            $invLoc->agents()->detach($userId);
+            if ($invLoc->user_id === $userId) {
+                $remaining = $invLoc->agents()->first();
+                $invLoc->update(['user_id' => $remaining?->idUser]);
+            }
+        } else {
+            $invLoc->agents()->attach($userId);
+            if (!$invLoc->user_id) {
+                $invLoc->update(['user_id' => $userId]);
+            }
+        }
+    }
+
+    /**
+     * Ajoute un agent à toutes les localisations de l'inventaire
+     */
+    public function ajouterAgentPartout($userId): void
+    {
+        if (!Auth::user()->isAdmin() || !$this->modalInventaireId || !$userId) {
+            return;
+        }
+
+        $userId = (int) $userId;
+        $invLocs = InventaireLocalisation::where('inventaire_id', $this->modalInventaireId)->get();
+
+        foreach ($invLocs as $invLoc) {
+            $invLoc->agents()->syncWithoutDetaching([$userId]);
+            if (!$invLoc->user_id) {
+                $invLoc->update(['user_id' => $userId]);
+            }
+        }
+
+        session()->flash('success', 'Agent ajouté à toutes les localisations.');
     }
 
     /**
