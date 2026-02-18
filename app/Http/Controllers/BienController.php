@@ -9,6 +9,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class BienController extends Controller
 {
@@ -256,10 +257,19 @@ class BienController extends Controller
                 ];
             })->toArray();
 
+            $qrSvg = QrCode::format('svg')
+                ->size(300)
+                ->margin(1)
+                ->errorCorrection('H')
+                ->generate("EMP-{$idEmplacement}");
+
+            $qrDataUri = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+
             return view('pdf.etiquettes-biens-par-emplacement-client', [
                 'biens' => $biens,
                 'biensData' => $biensData,
                 'emplacement' => $emplacement,
+                'qrDataUri' => $qrDataUri,
             ]);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Erreur lors de l\'impression des étiquettes: ' . $e->getMessage());

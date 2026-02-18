@@ -143,7 +143,6 @@
     {{-- Bibliothèques JS --}}
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
     <script>
         function etiquettesPDF() {
@@ -152,6 +151,7 @@
                 emplacementName: @json($emplacement->Emplacement ?? 'Emplacement'),
                 emplacementId: @json($emplacement->idEmplacement),
                 localisationName: @json($emplacement->localisation->Localisation ?? ''),
+                qrDataUri: @json($qrDataUri),
 
                 loading: false,
                 generated: false,
@@ -220,16 +220,25 @@
                         const FS_CODE = 7;
                         const FS_DESIG = 5;
 
-                        // ── Générer le QR code de l'emplacement ──
+                        // ── Convertir le QR code SVG (généré côté serveur) en PNG ──
                         const qrContent = `EMP-${this.emplacementId}`;
-                        const qrCanvas = document.createElement('canvas');
-                        qrCanvas.style.cssText = 'position:absolute;left:-9999px';
-                        document.body.appendChild(qrCanvas);
-                        await QRCode.toCanvas(qrCanvas, qrContent, {
-                            width: 200, margin: 1, color: { dark: '#000', light: '#fff' }
+                        const qrImg = await new Promise((resolve, reject) => {
+                            const img = new Image();
+                            img.onload = async () => {
+                                const c = document.createElement('canvas');
+                                c.width = 300; c.height = 300;
+                                const ctx = c.getContext('2d');
+                                ctx.fillStyle = '#fff';
+                                ctx.fillRect(0, 0, 300, 300);
+                                ctx.drawImage(img, 0, 0, 300, 300);
+                                try {
+                                    const embedded = await pdfDoc.embedPng(c.toDataURL('image/png'));
+                                    resolve(embedded);
+                                } catch (e) { reject(e); }
+                            };
+                            img.onerror = () => reject(new Error('Impossible de charger le QR code SVG'));
+                            img.src = this.qrDataUri;
                         });
-                        const qrImg = await pdfDoc.embedPng(qrCanvas.toDataURL('image/png'));
-                        document.body.removeChild(qrCanvas);
 
                         this.progressCurrent = 1;
                         this.progressPercent = Math.round((1 / this.progressTotal) * 100);
