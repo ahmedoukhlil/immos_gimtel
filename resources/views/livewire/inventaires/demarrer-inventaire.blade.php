@@ -410,48 +410,6 @@
                         </div>
                     </div>
 
-                    {{-- Checklist de progression --}}
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                        <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Checklist</p>
-                        <div class="space-y-2.5">
-                            @php
-                                $step1Ok = !empty($annee) && !empty($date_debut);
-                                $step2Ok = count($localisationsSelectionnees) > 0;
-                                $step3Ok = $this->agentsImpliques > 0;
-                            @endphp
-                            <div class="flex items-center gap-2.5">
-                                <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 {{ $step1Ok ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400' }}">
-                                    @if($step1Ok)
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                    @else
-                                        <span class="text-[9px] font-bold">1</span>
-                                    @endif
-                                </div>
-                                <span class="text-sm {{ $step1Ok ? 'text-green-700' : 'text-gray-500' }}">Année & date renseignées</span>
-                            </div>
-                            <div class="flex items-center gap-2.5">
-                                <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 {{ $step2Ok ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400' }}">
-                                    @if($step2Ok)
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                    @else
-                                        <span class="text-[9px] font-bold">2</span>
-                                    @endif
-                                </div>
-                                <span class="text-sm {{ $step2Ok ? 'text-green-700' : 'text-gray-500' }}">{{ $this->totalLocalisations }} localisation(s) sélectionnée(s)</span>
-                            </div>
-                            <div class="flex items-center gap-2.5">
-                                <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 {{ $step3Ok ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400' }}">
-                                    @if($step3Ok)
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                    @else
-                                        <span class="text-[9px] font-bold">3</span>
-                                    @endif
-                                </div>
-                                <span class="text-sm {{ $step3Ok ? 'text-green-700' : 'text-gray-500' }}">{{ $this->agentsImpliques }} agent(s) assigné(s)</span>
-                            </div>
-                        </div>
-                    </div>
-
                     {{-- Statut --}}
                     <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
                         <div class="flex items-start gap-3">
