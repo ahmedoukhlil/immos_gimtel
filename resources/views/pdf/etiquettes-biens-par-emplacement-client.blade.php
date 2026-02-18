@@ -36,8 +36,8 @@
                     @endif
                     <span class="inline-flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
-                        {{ count($biensData) }} étiquette{{ count($biensData) > 1 ? 's' : '' }}
-                        &middot; {{ ceil(count($biensData) / 33) }} page{{ ceil(count($biensData) / 33) > 1 ? 's' : '' }}
+                        {{ count($biensData) + 1 }} étiquette{{ count($biensData) > 0 ? 's' : '' }} (1 QR emplacement + {{ count($biensData) }} bien{{ count($biensData) > 1 ? 's' : '' }})
+                        &middot; {{ ceil((count($biensData) + 1) / 33) }} page{{ ceil((count($biensData) + 1) / 33) > 1 ? 's' : '' }}
                     </span>
                 </div>
             </div>
@@ -143,19 +143,22 @@
     {{-- Bibliothèques JS --}}
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
     <script>
         function etiquettesPDF() {
             return {
                 biensData: @json($biensData),
                 emplacementName: @json($emplacement->Emplacement ?? 'Emplacement'),
+                emplacementId: @json($emplacement->idEmplacement),
+                localisationName: @json($emplacement->localisation->Localisation ?? ''),
 
                 loading: false,
                 generated: false,
                 statusType: 'info',
-                statusText: 'Prêt à générer {{ count($biensData) }} étiquette{{ count($biensData) > 1 ? "s" : "" }} Code 128.',
+                statusText: 'Prêt à générer {{ count($biensData) + 1 }} étiquette{{ count($biensData) > 0 ? "s" : "" }} (1 QR emplacement + {{ count($biensData) }} bien{{ count($biensData) > 1 ? "s" : "" }}).',
                 progressCurrent: 0,
-                progressTotal: {{ count($biensData) }},
+                progressTotal: {{ count($biensData) + 1 }},
                 progressPercent: 0,
                 pdfBlobUrl: null,
 
@@ -203,46 +206,109 @@
                         const { PDFDocument } = PDFLib;
                         const pdfDoc = await PDFDocument.create();
                         const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-                        const pages = Math.ceil(this.biensData.length / this.TOTAL);
+                        const fontBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
 
-                        // ── Positions fixes en mm depuis le HAUT de chaque étiquette ──
-                        // Étiquette = 24.4mm de haut, centre à 12.2mm
-                        // Layout vertical centré (~4mm padding haut/bas) :
-                        //   4.0mm  → haut du code-barres
-                        //   12.0mm → bas du code-barres (barcode = 8mm)
-                        //   15.5mm → baseline du code formaté (taille 7)
-                        //   19.0mm → baseline de la désignation (taille 5)
-                        //   ~20.5mm → fin visuelle du contenu
-                        //   24.4mm → bas de l'étiquette
+                        // Total d'emplacements sur la grille : 1 (QR emplacement) + N biens
+                        const totalSlots = 1 + this.biensData.length;
+                        const totalPages = Math.ceil(totalSlots / this.TOTAL);
+
                         const mm = this.MM;
-                        const BC_TOP_OFFSET  = 4.0 * mm;   // 4mm depuis le haut
-                        const BC_HEIGHT      = 8.0 * mm;   // hauteur code-barres 8mm
-                        const CODE_Y_OFFSET  = 15.5 * mm;  // baseline code à 15.5mm du haut (3.5mm sous barcode)
-                        const DESIG_Y_OFFSET = 19.0 * mm;  // baseline désignation à 19mm du haut
+                        const BC_TOP_OFFSET  = 4.0 * mm;
+                        const BC_HEIGHT      = 8.0 * mm;
+                        const CODE_Y_OFFSET  = 15.5 * mm;
+                        const DESIG_Y_OFFSET = 19.0 * mm;
                         const FS_CODE = 7;
                         const FS_DESIG = 5;
 
-                        for (let pi = 0; pi < pages; pi++) {
-                            const page = pdfDoc.addPage([this.A4_W, this.A4_H]);
-                            const start = pi * this.TOTAL;
-                            const slice = this.biensData.slice(start, Math.min(start + this.TOTAL, this.biensData.length));
+                        // ── Générer le QR code de l'emplacement ──
+                        const qrContent = `EMP-${this.emplacementId}`;
+                        const qrCanvas = document.createElement('canvas');
+                        qrCanvas.style.cssText = 'position:absolute;left:-9999px';
+                        document.body.appendChild(qrCanvas);
+                        await QRCode.toCanvas(qrCanvas, qrContent, {
+                            width: 200, margin: 1, color: { dark: '#000', light: '#fff' }
+                        });
+                        const qrImg = await pdfDoc.embedPng(qrCanvas.toDataURL('image/png'));
+                        document.body.removeChild(qrCanvas);
 
-                            for (let i = 0; i < slice.length; i++) {
-                                const b = slice[i];
+                        this.progressCurrent = 1;
+                        this.progressPercent = Math.round((1 / this.progressTotal) * 100);
+
+                        for (let pi = 0; pi < totalPages; pi++) {
+                            const page = pdfDoc.addPage([this.A4_W, this.A4_H]);
+                            const slotStart = pi * this.TOTAL;
+                            const slotEnd = Math.min(slotStart + this.TOTAL, totalSlots);
+
+                            for (let slot = slotStart; slot < slotEnd; slot++) {
+                                const posOnPage = slot - slotStart;
+                                const col = posOnPage % this.COLS;
+                                const row = Math.floor(posOnPage / this.COLS);
+
+                                const labelX = this.MARGIN_LEFT + col * this.LABEL_W;
+                                const labelTopY = this.A4_H - this.MARGIN_TOP - row * this.ROW_PITCH;
+
+                                if (slot === 0) {
+                                    // ══════ PREMIÈRE ÉTIQUETTE : QR CODE EMPLACEMENT ══════
+                                    const qrSize = 18.0 * mm;
+                                    const padding = 2.0 * mm;
+                                    const qrX = labelX + padding;
+                                    const qrY = labelTopY - (this.LABEL_H - qrSize) / 2 - qrSize;
+                                    page.drawImage(qrImg, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+
+                                    // Texte à droite du QR
+                                    const textX = qrX + qrSize + 3.0 * mm;
+                                    const textMaxW = labelX + this.LABEL_W - textX - padding;
+
+                                    // Nom de l'emplacement (gras, taille 6.5)
+                                    const FS_EMP = 6.5;
+                                    let empText = this.emplacementName;
+                                    while (fontBold.widthOfTextAtSize(empText, FS_EMP) > textMaxW && empText.length > 1) {
+                                        empText = empText.slice(0, -1);
+                                    }
+                                    if (empText.length < this.emplacementName.length) empText += '…';
+                                    page.drawText(empText, {
+                                        x: textX,
+                                        y: labelTopY - 9.0 * mm,
+                                        size: FS_EMP, font: fontBold,
+                                        color: PDFLib.rgb(0, 0, 0)
+                                    });
+
+                                    // Localisation (taille 5)
+                                    if (this.localisationName) {
+                                        let locText = this.localisationName;
+                                        while (font.widthOfTextAtSize(locText, 5) > textMaxW && locText.length > 1) {
+                                            locText = locText.slice(0, -1);
+                                        }
+                                        if (locText.length < this.localisationName.length) locText += '…';
+                                        page.drawText(locText, {
+                                            x: textX,
+                                            y: labelTopY - 13.5 * mm,
+                                            size: 5, font,
+                                            color: PDFLib.rgb(0.3, 0.3, 0.3)
+                                        });
+                                    }
+
+                                    // Code EMP-id (taille 4.5)
+                                    page.drawText(qrContent, {
+                                        x: textX,
+                                        y: labelTopY - 17.5 * mm,
+                                        size: 4.5, font,
+                                        color: PDFLib.rgb(0.4, 0.4, 0.4)
+                                    });
+
+                                    continue;
+                                }
+
+                                // ══════ ÉTIQUETTES BIENS (décalées de 1) ══════
+                                const bienIndex = slot - 1;
+                                const b = this.biensData[bienIndex];
+                                if (!b) continue;
+
                                 const val = String(b.barcode_value || b.NumOrdre).trim();
                                 const code = String(b.code_formate || '').trim();
                                 const desig = String(b.designation || '').trim();
                                 if (!val) continue;
 
-                                const col = i % this.COLS;
-                                const row = Math.floor(i / this.COLS);
-
-                                // ── Coin supérieur gauche de l'étiquette ──
-                                const labelX = this.MARGIN_LEFT + col * this.LABEL_W;
-                                const labelTopY = this.A4_H - this.MARGIN_TOP - row * this.ROW_PITCH;
-                                const labelBottomY = labelTopY - this.LABEL_H;
-
-                                // ── Générer le code-barres ──
                                 const canvas = document.createElement('canvas');
                                 canvas.style.cssText = 'position:absolute;left:-9999px';
                                 document.body.appendChild(canvas);
@@ -255,19 +321,15 @@
                                 const img = await pdfDoc.embedPng(canvas.toDataURL('image/png'));
                                 document.body.removeChild(canvas);
 
-                                // ── Dimensions du code-barres ──
                                 const bcAR = img.width / img.height;
                                 const maxBcW = this.LABEL_W * 0.88;
                                 let bcW = BC_HEIGHT * bcAR;
                                 if (bcW > maxBcW) bcW = maxBcW;
 
-                                // ── Dessiner le code-barres (position fixe) ──
-                                // En PDF : Y du bas de l'image = labelTopY - offset - hauteur
                                 const bcY = labelTopY - BC_TOP_OFFSET - BC_HEIGHT;
                                 const bcX = labelX + (this.LABEL_W - bcW) / 2;
                                 page.drawImage(img, { x: bcX, y: bcY, width: bcW, height: BC_HEIGHT });
 
-                                // ── Code formaté (position fixe) ──
                                 if (code) {
                                     const tw = font.widthOfTextAtSize(code, FS_CODE);
                                     page.drawText(code, {
@@ -278,7 +340,6 @@
                                     });
                                 }
 
-                                // ── Désignation (position fixe) ──
                                 if (desig) {
                                     const maxTxtW = this.LABEL_W * 0.92;
                                     let txt = desig;
@@ -295,7 +356,7 @@
                                     });
                                 }
 
-                                this.progressCurrent = start + i + 1;
+                                this.progressCurrent = bienIndex + 2;
                                 this.progressPercent = Math.round((this.progressCurrent / this.progressTotal) * 100);
                             }
                         }
@@ -307,7 +368,7 @@
 
                         this.loading = false;
                         this.generated = true;
-                        this.setStatus('success', `PDF généré — ${pages} page${pages > 1 ? 's' : ''}, ${this.biensData.length} étiquette${this.biensData.length > 1 ? 's' : ''}.`);
+                        this.setStatus('success', `PDF généré — ${totalPages} page${totalPages > 1 ? 's' : ''}, ${totalSlots} étiquette${totalSlots > 1 ? 's' : ''} (1 QR emplacement + ${this.biensData.length} bien${this.biensData.length > 1 ? 's' : ''}).`);
                     } catch (err) {
                         console.error(err);
                         this.loading = false;
