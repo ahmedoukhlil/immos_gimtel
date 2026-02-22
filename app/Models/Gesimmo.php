@@ -18,11 +18,14 @@ class Gesimmo extends Model
     protected $fillable = [
         'idDesignation', 'idCategorie', 'idEtat', 
         'idEmplacement', 'idNatJur', 'idSF', 
-        'DateAcquisition', 'Observations'
+        'DateAcquisition', 'Observations',
+        'valeur_acquisition', 'date_mise_en_service',
     ];
 
     protected $casts = [
-        'DateAcquisition' => 'integer', // Stocke uniquement l'année (ex: 2019)
+        'DateAcquisition' => 'integer',
+        'valeur_acquisition' => 'decimal:2',
+        'date_mise_en_service' => 'date',
     ];
 
     /**

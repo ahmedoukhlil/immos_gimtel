@@ -18,10 +18,18 @@ class SearchableSelect extends Component
     public $allowClear = true;
     public $disabled = false;
     public $name = '';
+    public $default = '';
     
-    // Props pour le style
     public $containerClass = '';
     public $inputClass = '';
+
+    public function mount(): void
+    {
+        if ($this->value === '' && $this->default !== '') {
+            $this->value = (string) $this->default;
+        }
+        $this->value = (string) $this->value;
+    }
 
     /**
      * Propriété calculée : Options filtrées selon la recherche

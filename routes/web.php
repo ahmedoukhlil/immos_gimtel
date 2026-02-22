@@ -208,6 +208,9 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
             // Création d'un bien
             Route::get('/create', \App\Livewire\Biens\FormBien::class)->name('create');
             
+            // Amortissements
+            Route::get('/amortissements', \App\Livewire\Biens\ListeAmortissements::class)->name('amortissements');
+            
             // Transfert d'un bien
             Route::get('/transfert', \App\Livewire\Biens\TransfertBien::class)->name('transfert');
             

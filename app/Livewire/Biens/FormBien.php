@@ -40,6 +40,8 @@ class FormBien extends Component
     public $idNatJur = '';
     public $idSF = '';
     public $DateAcquisition = '';
+    public $valeur_acquisition = '';
+    public $date_mise_en_service = '';
     public $quantite = 1;
 
     /**
@@ -100,19 +102,26 @@ class FormBien extends Component
     public function mount($bien = null): void
     {
         if ($bien) {
-            // Mode édition : charger les valeurs
             $this->bien = $bien;
             $this->bienId = $bien->NumOrdre;
-            $this->idDesignation = $bien->idDesignation;
-            $this->idCategorie = $bien->idCategorie;
-            $this->idEtat = $bien->idEtat;
-            $this->idEmplacement = $bien->idEmplacement;
-            $this->idNatJur = $bien->idNatJur;
-            $this->idSF = $bien->idSF;
-            // DateAcquisition est un entier (année), pas une date
+            $this->idDesignation = (string) ($bien->idDesignation ?? '');
+            $this->idCategorie = (string) ($bien->idCategorie ?? '');
+            $this->idEtat = (string) ($bien->idEtat ?? '');
+            $this->idEmplacement = (string) ($bien->idEmplacement ?? '');
+            $this->idNatJur = (string) ($bien->idNatJur ?? '');
+            $this->idSF = (string) ($bien->idSF ?? '');
             $this->DateAcquisition = $bien->DateAcquisition ?? '';
+            $this->valeur_acquisition = $bien->valeur_acquisition ?? '';
+            $this->date_mise_en_service = $bien->date_mise_en_service ? $bien->date_mise_en_service->format('Y-m-d') : '';
+
+            if ($bien->idEmplacement) {
+                $emplacement = Emplacement::find($bien->idEmplacement);
+                if ($emplacement) {
+                    $this->idLocalisation = (string) ($emplacement->idLocalisation ?? '');
+                    $this->idAffectation = (string) ($emplacement->idAffectation ?? '');
+                }
+            }
         } else {
-            // Mode création : valeurs par défaut (année actuelle)
             $this->DateAcquisition = now()->year;
             $this->quantite = 1;
         }
@@ -389,6 +398,8 @@ class FormBien extends Component
             'idNatJur' => 'required|exists:naturejurdique,idNatJur',
             'idSF' => 'required|exists:sourcefinancement,idSF',
             'DateAcquisition' => 'nullable|integer|min:1900|max:' . (now()->year + 1),
+            'valeur_acquisition' => 'nullable|numeric|min:0',
+            'date_mise_en_service' => 'nullable|date',
         ];
 
         // Ajouter la validation de quantité uniquement en mode création
@@ -420,6 +431,9 @@ class FormBien extends Component
             'DateAcquisition.integer' => 'L\'année d\'acquisition doit être un nombre.',
             'DateAcquisition.min' => 'L\'année d\'acquisition doit être supérieure ou égale à 1900.',
             'DateAcquisition.max' => 'L\'année d\'acquisition ne peut pas être dans le futur.',
+            'valeur_acquisition.numeric' => 'La valeur d\'acquisition doit être un nombre.',
+            'valeur_acquisition.min' => 'La valeur d\'acquisition ne peut pas être négative.',
+            'date_mise_en_service.date' => 'La date de mise en service n\'est pas valide.',
             'quantite.required' => 'La quantité est obligatoire.',
             'quantite.integer' => 'La quantité doit être un nombre entier.',
             'quantite.min' => 'La quantité doit être au moins de 1.',
@@ -446,6 +460,8 @@ class FormBien extends Component
                     'idNatJur' => $validated['idNatJur'],
                     'idSF' => $validated['idSF'],
                     'DateAcquisition' => !empty($validated['DateAcquisition']) ? (int)$validated['DateAcquisition'] : null,
+                    'valeur_acquisition' => !empty($validated['valeur_acquisition']) ? $validated['valeur_acquisition'] : null,
+                    'date_mise_en_service' => !empty($validated['date_mise_en_service']) ? $validated['date_mise_en_service'] : null,
                 ]);
 
                 $bien = $this->bien->fresh();
@@ -464,6 +480,8 @@ class FormBien extends Component
                     'idNatJur' => $validated['idNatJur'],
                     'idSF' => $validated['idSF'],
                     'DateAcquisition' => !empty($validated['DateAcquisition']) ? (int)$validated['DateAcquisition'] : null,
+                    'valeur_acquisition' => !empty($validated['valeur_acquisition']) ? $validated['valeur_acquisition'] : null,
+                    'date_mise_en_service' => !empty($validated['date_mise_en_service']) ? $validated['date_mise_en_service'] : null,
                 ];
                 
                 // Créer les immobilisations

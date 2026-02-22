@@ -14,7 +14,7 @@ class Categorie extends Model
     protected $primaryKey = 'idCategorie';
     public $timestamps = false;
 
-    protected $fillable = ['Categorie', 'CodeCategorie'];
+    protected $fillable = ['Categorie', 'CodeCategorie', 'duree_amortissement', 'taux_amortissement', 'type_cgi'];
 
     /**
      * RELATIONS
