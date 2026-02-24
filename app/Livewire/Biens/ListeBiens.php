@@ -8,9 +8,6 @@ use App\Models\Emplacement;
 use App\Models\Affectation;
 use App\Models\Designation;
 use App\Models\Categorie;
-use App\Models\Etat;
-use App\Models\NatureJuridique;
-use App\Models\SourceFinancement;
 use App\Livewire\Traits\WithCachedOptions;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -29,9 +26,8 @@ class ListeBiens extends Component
     public $filterLocalisation = '';
     public $filterAffectation = '';
     public $filterEmplacement = '';
-    public $filterEtat = '';
-    public $filterNatJur = '';
-    public $filterSF = '';
+    public $filterNumOrdreMin = '';
+    public $filterNumOrdreMax = '';
     public $filterDateAcquisition = '';
     public $sortField = 'NumOrdre';
     public $sortDirection = 'asc';
@@ -253,39 +249,6 @@ class ListeBiens extends Component
     }
 
     /**
-     * Propriété calculée : Retourne tous les états
-     * Cache 1h - table de référence rarement modifiée
-     */
-    public function getEtatsProperty()
-    {
-        return cache()->remember('liste_biens_etats', 3600, function () {
-            return Etat::orderBy('Etat')->get();
-        });
-    }
-
-    /**
-     * Propriété calculée : Retourne toutes les natures juridiques
-     * Cache 1h - table de référence rarement modifiée
-     */
-    public function getNatureJuridiquesProperty()
-    {
-        return cache()->remember('liste_biens_nature_juridiques', 3600, function () {
-            return NatureJuridique::orderBy('NatJur')->get();
-        });
-    }
-
-    /**
-     * Propriété calculée : Retourne toutes les sources de financement
-     * Cache 1h - table de référence rarement modifiée
-     */
-    public function getSourceFinancementsProperty()
-    {
-        return cache()->remember('liste_biens_source_financements', 3600, function () {
-            return SourceFinancement::orderBy('SourceFin')->get();
-        });
-    }
-
-    /**
      * Requête légère pour récupérer uniquement les NumOrdre (sans eager loading)
      */
     protected function getBiensNumOrdreQuery()
@@ -317,9 +280,12 @@ class ListeBiens extends Component
             if (!empty($this->filterLocalisation)) $query->whereHas('emplacement', fn($q) => $q->where('idLocalisation', $this->filterLocalisation));
             if (!empty($this->filterAffectation)) $query->whereHas('emplacement', fn($q) => $q->where('idAffectation', $this->filterAffectation));
         }
-        if (!empty($this->filterEtat)) $query->where('idEtat', $this->filterEtat);
-        if (!empty($this->filterNatJur)) $query->where('idNatJur', $this->filterNatJur);
-        if (!empty($this->filterSF)) $query->where('idSF', $this->filterSF);
+        if ($this->filterNumOrdreMin !== '' && is_numeric($this->filterNumOrdreMin)) {
+            $query->where('NumOrdre', '>=', (int) $this->filterNumOrdreMin);
+        }
+        if ($this->filterNumOrdreMax !== '' && is_numeric($this->filterNumOrdreMax)) {
+            $query->where('NumOrdre', '<=', (int) $this->filterNumOrdreMax);
+        }
         if (!empty($this->filterDateAcquisition)) $query->where('DateAcquisition', (int)$this->filterDateAcquisition);
 
         return $query->orderBy($this->sortField, $this->sortDirection);
@@ -369,9 +335,8 @@ class ListeBiens extends Component
         $this->filterLocalisation = '';
         $this->filterAffectation = '';
         $this->filterEmplacement = '';
-        $this->filterEtat = '';
-        $this->filterNatJur = '';
-        $this->filterSF = '';
+        $this->filterNumOrdreMin = '';
+        $this->filterNumOrdreMax = '';
         $this->filterDateAcquisition = '';
         $this->selectedBiens = [];
         $this->resetPage();
@@ -535,19 +500,12 @@ class ListeBiens extends Component
             }
         }
 
-        // Filtre par état
-        if (!empty($this->filterEtat)) {
-            $query->where('idEtat', $this->filterEtat);
+        // Filtre par intervalle de NumOrdre
+        if ($this->filterNumOrdreMin !== '' && is_numeric($this->filterNumOrdreMin)) {
+            $query->where('NumOrdre', '>=', (int) $this->filterNumOrdreMin);
         }
-
-        // Filtre par nature juridique
-        if (!empty($this->filterNatJur)) {
-            $query->where('idNatJur', $this->filterNatJur);
-        }
-
-        // Filtre par source de financement
-        if (!empty($this->filterSF)) {
-            $query->where('idSF', $this->filterSF);
+        if ($this->filterNumOrdreMax !== '' && is_numeric($this->filterNumOrdreMax)) {
+            $query->where('NumOrdre', '<=', (int) $this->filterNumOrdreMax);
         }
 
         // Filtre par année d'acquisition

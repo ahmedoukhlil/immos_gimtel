@@ -270,6 +270,76 @@ class BienController extends Controller
                 'biensData' => $biensData,
                 'emplacement' => $emplacement,
                 'qrDataUri' => $qrDataUri,
+                'includeEmplacementQr' => true,
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erreur lors de l\'impression des étiquettes: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Affiche la page d'impression des étiquettes pour un intervalle de NumOrdre
+     * avec la même mise en page que l'impression par emplacement.
+     */
+    public function imprimerEtiquettesParIntervalle(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'numOrdreMin' => 'required|integer|min:1',
+                'numOrdreMax' => 'required|integer|min:1|gte:numOrdreMin',
+            ]);
+
+            $numOrdreMin = (int) $validated['numOrdreMin'];
+            $numOrdreMax = (int) $validated['numOrdreMax'];
+
+            $biens = Gesimmo::whereBetween('NumOrdre', [$numOrdreMin, $numOrdreMax])
+                ->with([
+                    'emplacement.localisation',
+                    'emplacement.affectation',
+                    'designation',
+                    'categorie',
+                    'etat',
+                    'natureJuridique',
+                    'sourceFinancement'
+                ])
+                ->orderBy('NumOrdre')
+                ->get();
+
+            if ($biens->isEmpty()) {
+                return redirect()->back()->with('error', 'Aucun bien trouvé pour cet intervalle de NumOrdre.');
+            }
+
+            $biensData = $biens->map(function ($bien) {
+                return [
+                    'NumOrdre' => $bien->NumOrdre,
+                    'code_formate' => $bien->code_formate ?? '',
+                    'designation' => $bien->designation->designation ?? '',
+                    'barcode_value' => (string) $bien->NumOrdre,
+                ];
+            })->toArray();
+
+            $rangeIdentifier = "RANGE-{$numOrdreMin}-{$numOrdreMax}";
+            $qrSvg = QrCode::format('svg')
+                ->size(300)
+                ->margin(1)
+                ->errorCorrection('H')
+                ->generate($rangeIdentifier);
+
+            $qrDataUri = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+
+            $emplacement = (object) [
+                'idEmplacement' => $rangeIdentifier,
+                'Emplacement' => "Intervalle NumOrdre {$numOrdreMin} - {$numOrdreMax}",
+                'localisation' => null,
+                'affectation' => null,
+            ];
+
+            return view('pdf.etiquettes-biens-par-emplacement-client', [
+                'biens' => $biens,
+                'biensData' => $biensData,
+                'emplacement' => $emplacement,
+                'qrDataUri' => $qrDataUri,
+                'includeEmplacementQr' => false,
             ]);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Erreur lors de l\'impression des étiquettes: ' . $e->getMessage());

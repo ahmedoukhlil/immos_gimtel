@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Étiquettes — {{ $emplacement->Emplacement ?? 'N/A' }}</title>
+    <title>Étiquettes — <?php echo e($emplacement->Emplacement ?? 'N/A'); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak]{display:none!important}</style>
@@ -12,48 +12,52 @@
 
     <div class="max-w-5xl mx-auto px-4 py-6 space-y-6" x-data="etiquettesPDF()" x-cloak>
 
-        {{-- En-tête --}}
+        
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                    <a href="{{ route('biens.index') }}" class="hover:text-indigo-600 transition-colors">Immobilisations</a>
+                    <a href="<?php echo e(route('biens.index')); ?>" class="hover:text-indigo-600 transition-colors">Immobilisations</a>
                     <span>/</span>
                     <span class="text-gray-700 font-medium">Impression des étiquettes</span>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-900">{{ $emplacement->Emplacement ?? 'Emplacement' }}</h1>
+                <h1 class="text-2xl font-bold text-gray-900"><?php echo e($emplacement->Emplacement ?? 'Emplacement'); ?></h1>
                 <div class="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500">
-                    @if($emplacement->localisation)
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($emplacement->localisation): ?>
                         <span class="inline-flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            {{ $emplacement->localisation->Localisation }}
+                            <?php echo e($emplacement->localisation->Localisation); ?>
+
                         </span>
-                    @endif
-                    @if($emplacement->affectation)
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($emplacement->affectation): ?>
                         <span class="inline-flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                            {{ $emplacement->affectation->Affectation }}
+                            <?php echo e($emplacement->affectation->Affectation); ?>
+
                         </span>
-                    @endif
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                     <span class="inline-flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
-                        @php
+                        <?php
                             $includeQr = $includeEmplacementQr ?? true;
                             $totalEtiquettes = count($biensData) + ($includeQr ? 1 : 0);
-                        @endphp
-                        {{ $totalEtiquettes }} étiquette{{ $totalEtiquettes > 1 ? 's' : '' }}
-                        @if($includeQr)
-                            (1 QR emplacement + {{ count($biensData) }} bien{{ count($biensData) > 1 ? 's' : '' }})
-                        @else
-                            ({{ count($biensData) }} bien{{ count($biensData) > 1 ? 's' : '' }})
-                        @endif
-                        &middot; {{ ceil($totalEtiquettes / 33) }} page{{ ceil($totalEtiquettes / 33) > 1 ? 's' : '' }}
+                        ?>
+                        <?php echo e($totalEtiquettes); ?> étiquette<?php echo e($totalEtiquettes > 1 ? 's' : ''); ?>
+
+                        <?php if($includeQr): ?>
+                            (1 QR emplacement + <?php echo e(count($biensData)); ?> bien<?php echo e(count($biensData) > 1 ? 's' : ''); ?>)
+                        <?php else: ?>
+                            (<?php echo e(count($biensData)); ?> bien<?php echo e(count($biensData) > 1 ? 's' : ''); ?>)
+                        <?php endif; ?>
+                        &middot; <?php echo e(ceil($totalEtiquettes / 33)); ?> page<?php echo e(ceil($totalEtiquettes / 33) > 1 ? 's' : ''); ?>
+
                     </span>
                 </div>
             </div>
 
-            {{-- Boutons d'actions --}}
+            
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('biens.index') }}" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                <a href="<?php echo e(route('biens.index')); ?>" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                     Retour
                 </a>
@@ -87,7 +91,7 @@
             </div>
         </div>
 
-        {{-- Statut --}}
+        
         <div x-show="statusText" class="rounded-lg border px-4 py-3 text-sm flex items-center gap-2"
              :class="{
                  'bg-blue-50 border-blue-200 text-blue-700': statusType === 'info',
@@ -102,7 +106,7 @@
             <span x-text="statusText"></span>
         </div>
 
-        {{-- Progression --}}
+        
         <div x-show="loading" x-transition class="bg-white rounded-lg border border-gray-200 p-4">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium text-gray-700">Progression</span>
@@ -113,16 +117,16 @@
             </div>
         </div>
 
-        {{-- Prévisualisation PDF --}}
+        
         <div x-show="generated" x-transition class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <iframe id="pdfContainer" class="w-full border-0" style="height: 70vh; min-height: 500px;"></iframe>
         </div>
 
-        {{-- Tableau des biens --}}
+        
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
                 <h3 class="text-sm font-semibold text-gray-700">Liste des immobilisations</h3>
-                <span class="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">{{ count($biensData) }} bien{{ count($biensData) > 1 ? 's' : '' }}</span>
+                <span class="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full"><?php echo e(count($biensData)); ?> bien<?php echo e(count($biensData) > 1 ? 's' : ''); ?></span>
             </div>
             <div class="overflow-x-auto max-h-80 overflow-y-auto">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
@@ -135,44 +139,44 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-100">
-                        @foreach($biensData as $index => $bien)
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php $__currentLoopData = $biensData; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $bien): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-2 text-gray-400">{{ $index + 1 }}</td>
-                            <td class="px-4 py-2 font-semibold text-indigo-600">{{ $bien['NumOrdre'] }}</td>
-                            <td class="px-4 py-2 font-mono text-xs text-gray-500">{{ $bien['code_formate'] ?: '—' }}</td>
-                            <td class="px-4 py-2 text-gray-700 max-w-xs truncate">{{ $bien['designation'] ?: '—' }}</td>
+                            <td class="px-4 py-2 text-gray-400"><?php echo e($index + 1); ?></td>
+                            <td class="px-4 py-2 font-semibold text-indigo-600"><?php echo e($bien['NumOrdre']); ?></td>
+                            <td class="px-4 py-2 font-mono text-xs text-gray-500"><?php echo e($bien['code_formate'] ?: '—'); ?></td>
+                            <td class="px-4 py-2 text-gray-700 max-w-xs truncate"><?php echo e($bien['designation'] ?: '—'); ?></td>
                         </tr>
-                        @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    {{-- Bibliothèques JS --}}
+    
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
     <script>
         function etiquettesPDF() {
             return {
-                biensData: @json($biensData),
-                emplacementName: @json($emplacement->Emplacement ?? 'Emplacement'),
-                emplacementId: @json($emplacement->idEmplacement),
-                localisationName: @json($emplacement->localisation->Localisation ?? ''),
-                qrDataUri: @json($qrDataUri),
+                biensData: <?php echo json_encode($biensData, 15, 512) ?>,
+                emplacementName: <?php echo json_encode($emplacement->Emplacement ?? 'Emplacement', 15, 512) ?>,
+                emplacementId: <?php echo json_encode($emplacement->idEmplacement, 15, 512) ?>,
+                localisationName: <?php echo json_encode($emplacement->localisation->Localisation ?? '', 15, 512) ?>,
+                qrDataUri: <?php echo json_encode($qrDataUri, 15, 512) ?>,
 
                 loading: false,
                 generated: false,
                 statusType: 'info',
-                statusText: @json(
+                statusText: <?php echo json_encode(
                     ($includeEmplacementQr ?? true)
                         ? 'Prêt à générer ' . (count($biensData) + 1) . ' étiquette' . ((count($biensData) + 1) > 1 ? 's' : '') . ' (1 QR emplacement + ' . count($biensData) . ' bien' . (count($biensData) > 1 ? 's' : '') . ').'
                         : 'Prêt à générer ' . count($biensData) . ' étiquette' . (count($biensData) > 1 ? 's' : '') . ' (' . count($biensData) . ' bien' . (count($biensData) > 1 ? 's' : '') . ').'
-                ),
+                , 15, 512) ?>,
                 progressCurrent: 0,
-                includeEmplacementQr: @json($includeEmplacementQr ?? true),
-                progressTotal: {{ count($biensData) + (($includeEmplacementQr ?? true) ? 1 : 0) }},
+                includeEmplacementQr: <?php echo json_encode($includeEmplacementQr ?? true, 15, 512) ?>,
+                progressTotal: <?php echo e(count($biensData) + (($includeEmplacementQr ?? true) ? 1 : 0)); ?>,
                 progressPercent: 0,
                 pdfBlobUrl: null,
 
@@ -411,3 +415,4 @@
     </script>
 </body>
 </html>
+<?php /**PATH C:\xampp\htdocs\immos_gimtel\resources\views/pdf/etiquettes-biens-par-emplacement-client.blade.php ENDPATH**/ ?>

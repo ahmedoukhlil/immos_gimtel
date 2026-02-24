@@ -271,66 +271,80 @@
                         @endif
                     </div>
 
-                    {{-- Troisième ligne : Autres filtres --}}
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {{-- Filtre État (select natif - peu d'options) --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                État
-                            </label>
-                            <select
-                                wire:model.live="filterEtat"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="">Tous les états</option>
-                                @foreach($this->etats as $e)
-                                    <option value="{{ $e->idEtat }}">{{ $e->Etat }}</option>
-                                @endforeach
-                            </select>
+                    {{-- Troisième ligne : Intervalle NumOrdre + Impression étiquettes --}}
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                            <svg class="w-4 h-4 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3m6 0c0 1.657-1.343 3-3 3m0-6V5m0 9v5m7-8h-3M8 12H5" />
+                            </svg>
+                            Filtrage et impression par intervalle NumOrdre
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    NumOrdre de début
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    wire:model.live.debounce.300ms="filterNumOrdreMin"
+                                    placeholder="Ex: 1000"
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    NumOrdre de fin
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    wire:model.live.debounce.300ms="filterNumOrdreMax"
+                                    placeholder="Ex: 1200"
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Année d'acquisition
+                                </label>
+                                <input
+                                    type="number"
+                                    wire:model.live.debounce.300ms="filterDateAcquisition"
+                                    min="1900"
+                                    max="{{ now()->year + 1 }}"
+                                    placeholder="Ex: {{ now()->year }}"
+                                    class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                            </div>
                         </div>
 
-                        {{-- Filtre Nature Juridique (select natif - peu d'options) --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Nature Juridique
-                            </label>
-                            <select
-                                wire:model.live="filterNatJur"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="">Toutes les natures juridiques</option>
-                                @foreach($this->natureJuridiques as $n)
-                                    <option value="{{ $n->idNatJur }}">{{ $n->NatJur }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Filtre Source de Financement (select natif - peu d'options) --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Source de Financement
-                            </label>
-                            <select
-                                wire:model.live="filterSF"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                <option value="">Toutes les sources de financement</option>
-                                @foreach($this->sourceFinancements as $s)
-                                    <option value="{{ $s->idSF }}">{{ $s->SourceFin }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        {{-- Filtre Année d'acquisition --}}
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Année d'acquisition
-                            </label>
-                            <input 
-                                type="number"
-                                wire:model.live.debounce.300ms="filterDateAcquisition"
-                                min="1900"
-                                max="{{ now()->year + 1 }}"
-                                placeholder="Ex: {{ now()->year }}"
-                                class="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        </div>
+                        @if($filterNumOrdreMin !== '' && $filterNumOrdreMax !== '')
+                            <div class="mt-3 pt-3 border-t border-gray-200">
+                                <form
+                                    action="{{ route('biens.imprimer-etiquettes-par-intervalle') }}"
+                                    method="POST"
+                                    class="inline-block">
+                                    @csrf
+                                    <input type="hidden" name="numOrdreMin" value="{{ $filterNumOrdreMin }}">
+                                    <input type="hidden" name="numOrdreMax" value="{{ $filterNumOrdreMax }}">
+                                    <button
+                                        type="submit"
+                                        class="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+                                        title="Imprimer toutes les étiquettes de cet intervalle (33 par page A4)">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                        </svg>
+                                        Imprimer les étiquettes de cet intervalle
+                                    </button>
+                                </form>
+                                <p class="mt-2 text-xs text-gray-500">
+                                    <svg class="w-4 h-4 inline-block mr-1 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Format: 33 étiquettes par page A4
+                                </p>
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -514,7 +528,7 @@
                                     </svg>
                                     <h3 class="mt-2 text-sm font-medium text-gray-900">Aucun bien trouvé</h3>
                                     <p class="mt-1 text-sm text-gray-500">
-                                        @if($search || $filterDesignation || $filterCategorie || $filterLocalisation || $filterAffectation || $filterEmplacement || $filterEtat || $filterNatJur || $filterSF || $filterDateAcquisition)
+                                        @if($search || $filterDesignation || $filterCategorie || $filterLocalisation || $filterAffectation || $filterEmplacement || $filterNumOrdreMin || $filterNumOrdreMax || $filterDateAcquisition)
                                             Essayez de modifier vos critères de recherche.
                                         @else
                                             Commencez par créer une nouvelle immobilisation.
