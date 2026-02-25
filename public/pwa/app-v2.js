@@ -357,8 +357,15 @@ class ScannerManager {
             const response = await API.request(`/emplacements/${idEmplacement}/biens`);
             console.log('[Scanner] Réponse API:', response);
             
+            const dejaScannesSet = new Set(
+                (response.biens_deja_scannes || []).map(scan => parseInt(scan.num_ordre, 10))
+            );
+
             AppState.currentEmplacement = response.emplacement;
-            AppState.biensAttendus = response.biens;
+            // En réouverture, ne garder que les biens restants à scanner
+            AppState.biensAttendus = (response.biens || []).filter(
+                bien => !dejaScannesSet.has(parseInt(bien.num_ordre, 10))
+            );
             AppState.biensScannés = (response.biens_deja_scannes || []).map(scan => ({
                 num_ordre: parseInt(scan.num_ordre, 10),
                 etat_id: null, // Historique existant sans correspondance fiable idEtat
@@ -366,7 +373,8 @@ class ScannerManager {
                 designation: null,
                 categorie: null,
                 statut: 'present',
-                emplacement_initial: null
+                emplacement_initial: null,
+                is_preloaded_expected: true
             }));
 
             HapticFeedback.medium();
@@ -594,10 +602,9 @@ class UI {
             list.appendChild(item);
         });
 
-        // Afficher les biens non attendus (scannés mais pas dans biensAttendus)
-        // L'emplacement d'origine sera détecté par le serveur au clic "Terminer"
+        // Afficher uniquement les biens réellement non attendus/déplacés
         const biensNonAttendus = AppState.biensScannés.filter(
-            s => !AppState.biensAttendus.some(b => b.num_ordre === s.num_ordre)
+            s => s.statut === 'non_attendu' || s.statut === 'deplace'
         );
         if (biensNonAttendus.length > 0) {
             const separator = document.createElement('div');
@@ -632,7 +639,9 @@ class UI {
         const scannedAttendus = AppState.biensScannés.filter(
             s => AppState.biensAttendus.some(b => b.num_ordre === s.num_ordre)
         ).length;
-        const scannedDeplaces = AppState.biensScannés.length - scannedAttendus;
+        const scannedDeplaces = AppState.biensScannés.filter(
+            s => s.statut === 'non_attendu' || s.statut === 'deplace'
+        ).length;
         const percent = total > 0 ? Math.round((scannedAttendus / total) * 100) : 0;
 
         let progressText = `${scannedAttendus}/${total} biens scannés`;
