@@ -386,10 +386,8 @@ class ScanController extends Controller
             ], 404);
         }
 
-        // Déterminer l'inventaire actif pour précharger les biens déjà scannés
-        $inventaire = Inventaire::whereIn('statut', ['en_preparation', 'en_cours'])
-            ->orderByDesc('id')
-            ->first();
+        // Déterminer l'inventaire actif (priorité à "en_cours")
+        $inventaire = $this->getInventaireActif();
 
         $inventaireLocalisation = null;
         $biensDejaScannes = collect();
@@ -437,15 +435,6 @@ class ScanController extends Controller
                 $reopened = true;
             }
 
-            $biensDejaScannes = InventaireScan::where('inventaire_id', $inventaire->id)
-                ->where('inventaire_localisation_id', $inventaireLocalisation->id)
-                ->get(['bien_id', 'etat_constate'])
-                ->map(function ($scan) {
-                    return [
-                        'num_ordre' => (int) $scan->bien_id,
-                        'etat_constate' => $scan->etat_constate,
-                    ];
-                });
         }
 
         // Récupérer tous les biens de cet emplacement
@@ -471,6 +460,36 @@ class ScanController extends Controller
                     'observations' => $bien->Observations,
                 ];
             });
+
+        // Précharger les biens déjà scannés de CET emplacement dans l'inventaire actif
+        if ($inventaire && $biens->isNotEmpty()) {
+            $numOrdresAttendus = $biens->pluck('num_ordre')->map(fn ($n) => (int) $n)->all();
+
+            $biensDejaScannes = InventaireScan::where('inventaire_id', $inventaire->id)
+                ->whereIn('bien_id', $numOrdresAttendus)
+                ->distinct('bien_id')
+                ->get(['bien_id', 'etat_constate'])
+                ->map(function ($scan) {
+                    return [
+                        'num_ordre' => (int) $scan->bien_id,
+                        'etat_constate' => $scan->etat_constate,
+                    ];
+                });
+
+            if ($inventaireLocalisation) {
+                $biensRestants = max(0, $biens->count() - $biensDejaScannes->count());
+
+                if ($inventaireLocalisation->statut === 'termine' && $biensRestants > 0) {
+                    $inventaireLocalisation->update([
+                        'statut' => 'en_cours',
+                        'date_fin_scan' => null,
+                        'date_debut_scan' => $inventaireLocalisation->date_debut_scan ?? now(),
+                        'user_id' => optional(request()->user())->idUser ?? $inventaireLocalisation->user_id,
+                    ]);
+                    $reopened = true;
+                }
+            }
+        }
 
         return response()->json([
             'emplacement' => [
@@ -598,7 +617,7 @@ class ScanController extends Controller
         }
 
         // Trouver l'inventaire en cours
-        $inventaire = Inventaire::whereIn('statut', ['en_preparation', 'en_cours'])->first();
+        $inventaire = $this->getInventaireActif();
         
         if (!$inventaire) {
             return response()->json([
@@ -792,5 +811,20 @@ class ScanController extends Controller
             'biens_en_trop' => $detailsEnTrop,
             'biens_introuvables' => $biensIntrouvables,
         ], 200);
+    }
+
+    /**
+     * Retourne l'inventaire actif en priorisant un inventaire en cours.
+     */
+    private function getInventaireActif(): ?Inventaire
+    {
+        return Inventaire::query()
+            ->where(function ($q) {
+                $q->where('statut', 'en_cours')
+                  ->orWhere('statut', 'en_preparation');
+            })
+            ->orderByRaw("CASE WHEN statut = 'en_cours' THEN 0 ELSE 1 END")
+            ->orderByDesc('id')
+            ->first();
     }
 }
