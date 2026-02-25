@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Inventaire;
 use App\Models\InventaireLocalisation;
+use App\Models\InventaireScan;
+use App\Models\Gesimmo;
 use App\Services\InventaireService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -161,11 +163,34 @@ class InventaireController extends Controller
                 ]
             );
 
-            // ✅ CAS 1 : Localisation déjà terminée → Erreur
+            // Recalculer les compteurs pour décider si la localisation peut être réouverte
+            [$biensAttendus, $biensScannes] = $this->recalculerCompteursLocalisation($inventaireLocalisation);
+            $biensRestants = max(0, $biensAttendus - $biensScannes);
+
+            // ✅ CAS 1 : Localisation déjà terminée
             if ($inventaireLocalisation->statut === 'termine') {
+                // Si des biens restent à scanner, autoriser la réouverture
+                if ($biensRestants > 0) {
+                    $inventaireLocalisation->update([
+                        'statut' => 'en_cours',
+                        'date_fin_scan' => null,
+                        'user_id' => $validated['user_id'],
+                        'date_debut_scan' => $inventaireLocalisation->date_debut_scan ?? now(),
+                    ]);
+
+                    return response()->json([
+                        'message' => 'Localisation réouverte pour scanner les biens restants',
+                        'reopened' => true,
+                        'biens_restants' => $biensRestants,
+                        'inventaire_localisation' => $this->formatInventaireLocalisation($inventaireLocalisation)
+                    ]);
+                }
+
                 return response()->json([
                     'message' => 'Cette localisation a déjà été inventoriée',
                     'statut' => 'termine',
+                    'reopened' => false,
+                    'biens_restants' => 0,
                     'inventaire_localisation' => $this->formatInventaireLocalisation($inventaireLocalisation)
                 ], 400);
             }
@@ -302,5 +327,27 @@ class InventaireController extends Controller
                 'CodeLocalisation' => $invLoc->localisation->CodeLocalisation,
             ] : null
         ];
+    }
+
+    /**
+     * Recalcule les compteurs de biens attendus/scannés d'une localisation d'inventaire.
+     */
+    private function recalculerCompteursLocalisation(InventaireLocalisation $inventaireLocalisation): array
+    {
+        $biensAttendus = Gesimmo::whereHas('emplacement', function ($q) use ($inventaireLocalisation) {
+            $q->where('idLocalisation', $inventaireLocalisation->localisation_id);
+        })->count();
+
+        $biensScannes = InventaireScan::where('inventaire_id', $inventaireLocalisation->inventaire_id)
+            ->where('inventaire_localisation_id', $inventaireLocalisation->id)
+            ->distinct('bien_id')
+            ->count('bien_id');
+
+        $inventaireLocalisation->update([
+            'nombre_biens_attendus' => $biensAttendus,
+            'nombre_biens_scannes' => $biensScannes,
+        ]);
+
+        return [$biensAttendus, $biensScannes];
     }
 }

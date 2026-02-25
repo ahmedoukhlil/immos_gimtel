@@ -359,11 +359,26 @@ class ScannerManager {
             
             AppState.currentEmplacement = response.emplacement;
             AppState.biensAttendus = response.biens;
-            AppState.biensScannés = [];
+            AppState.biensScannés = (response.biens_deja_scannes || []).map(scan => ({
+                num_ordre: parseInt(scan.num_ordre, 10),
+                etat_id: null, // Historique existant sans correspondance fiable idEtat
+                photo: null,
+                designation: null,
+                categorie: null,
+                statut: 'present',
+                emplacement_initial: null
+            }));
 
             HapticFeedback.medium();
             UI.showEmplacementView();
             BarcodeScannerManager.startBarcodeScanner();
+
+            const invLoc = response.inventaire_localisation;
+            if (invLoc?.reopened) {
+                UI.showToast(`🔄 Emplacement réouvert: ${invLoc.biens_restants} bien(s) restant(s) à scanner`, 'info');
+            } else if (AppState.biensScannés.length > 0) {
+                UI.showToast(`ℹ️ ${AppState.biensScannés.length} bien(s) déjà scanné(s) chargés`, 'info');
+            }
 
         } catch (error) {
             console.error('[Scanner] Erreur API:', error);

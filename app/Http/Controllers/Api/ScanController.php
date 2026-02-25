@@ -386,6 +386,68 @@ class ScanController extends Controller
             ], 404);
         }
 
+        // Déterminer l'inventaire actif pour précharger les biens déjà scannés
+        $inventaire = Inventaire::whereIn('statut', ['en_preparation', 'en_cours'])
+            ->orderByDesc('id')
+            ->first();
+
+        $inventaireLocalisation = null;
+        $biensDejaScannes = collect();
+        $reopened = false;
+        $biensRestants = null;
+
+        if ($inventaire && $emplacement->idLocalisation) {
+            $inventaireLocalisation = InventaireLocalisation::firstOrCreate(
+                [
+                    'inventaire_id' => $inventaire->id,
+                    'localisation_id' => $emplacement->idLocalisation,
+                ],
+                [
+                    'statut' => 'en_attente',
+                    'nombre_biens_attendus' => 0,
+                    'nombre_biens_scannes' => 0,
+                    'user_id' => optional(request()->user())->idUser,
+                ]
+            );
+
+            $nombreBiensAttendus = Gesimmo::whereHas('emplacement', function ($q) use ($inventaireLocalisation) {
+                $q->where('idLocalisation', $inventaireLocalisation->localisation_id);
+            })->count();
+
+            $nombreBiensScannes = InventaireScan::where('inventaire_id', $inventaire->id)
+                ->where('inventaire_localisation_id', $inventaireLocalisation->id)
+                ->distinct('bien_id')
+                ->count('bien_id');
+
+            $biensRestants = max(0, $nombreBiensAttendus - $nombreBiensScannes);
+
+            $inventaireLocalisation->update([
+                'nombre_biens_attendus' => $nombreBiensAttendus,
+                'nombre_biens_scannes' => $nombreBiensScannes,
+            ]);
+
+            // Si la localisation est marquée terminée mais incomplète, la réouvrir automatiquement
+            if ($inventaireLocalisation->statut === 'termine' && $biensRestants > 0) {
+                $inventaireLocalisation->update([
+                    'statut' => 'en_cours',
+                    'date_fin_scan' => null,
+                    'date_debut_scan' => $inventaireLocalisation->date_debut_scan ?? now(),
+                    'user_id' => optional(request()->user())->idUser ?? $inventaireLocalisation->user_id,
+                ]);
+                $reopened = true;
+            }
+
+            $biensDejaScannes = InventaireScan::where('inventaire_id', $inventaire->id)
+                ->where('inventaire_localisation_id', $inventaireLocalisation->id)
+                ->get(['bien_id', 'etat_constate'])
+                ->map(function ($scan) {
+                    return [
+                        'num_ordre' => (int) $scan->bien_id,
+                        'etat_constate' => $scan->etat_constate,
+                    ];
+                });
+        }
+
         // Récupérer tous les biens de cet emplacement
         $biens = Gesimmo::where('idEmplacement', $idEmplacement)
             ->with([
@@ -428,6 +490,15 @@ class ScanController extends Controller
             ],
             'biens' => $biens,
             'total' => $biens->count(),
+            'biens_deja_scannes' => $biensDejaScannes->values(),
+            'inventaire_localisation' => $inventaireLocalisation ? [
+                'id' => $inventaireLocalisation->id,
+                'statut' => $inventaireLocalisation->statut,
+                'nombre_biens_attendus' => (int) $inventaireLocalisation->nombre_biens_attendus,
+                'nombre_biens_scannes' => (int) $inventaireLocalisation->nombre_biens_scannes,
+                'biens_restants' => (int) ($biensRestants ?? 0),
+                'reopened' => $reopened,
+            ] : null,
         ], 200);
     }
 
