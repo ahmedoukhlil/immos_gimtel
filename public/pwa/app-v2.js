@@ -13,6 +13,20 @@ const CONFIG = {
     API_BASE_URL: window.location.origin + '/api/v1',
     STORAGE_KEY_TOKEN: 'inventaire_token_v2',
     STORAGE_KEY_USER: 'inventaire_user_v2',
+    SCANNER: {
+        qr: {
+            width: 960,
+            height: 540,
+            decodeIntervalMs: 120,
+            detectCooldownMs: 1200
+        },
+        barcode: {
+            width: 960,
+            height: 540,
+            frequency: 8,
+            detectCooldownMs: 700
+        }
+    }
 };
 
 // ===========================================
@@ -75,6 +89,12 @@ const AppState = {
     scannerActive: false,
     barcodeScanner: null,
     modalBienEnCours: null, // bien en attente de confirmation (num_ordre, designation)
+    qrProcessing: false,
+    qrLastDecodedAt: 0,
+    qrLastDetectedAt: 0,
+    barcodeProcessing: false,
+    barcodeLastDetectedAt: 0,
+    barcodeLastCode: null,
 };
 
 // ===========================================
@@ -220,10 +240,10 @@ class ScannerManager {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'environment', // Caméra arrière
-                    width: { min: 640, ideal: 1280, max: 1920 },
-                    height: { min: 480, ideal: 720, max: 1080 },
-                    aspectRatio: { ideal: 16/9 },
-                    frameRate: { ideal: 30, max: 60 }
+                    width: { ideal: CONFIG.SCANNER.qr.width, max: 1280 },
+                    height: { ideal: CONFIG.SCANNER.qr.height, max: 720 },
+                    aspectRatio: { ideal: 16 / 9 },
+                    frameRate: { ideal: 24, max: 30 }
                 },
                 audio: false
             });
@@ -271,6 +291,13 @@ class ScannerManager {
         const scanFrame = () => {
             if (!AppState.scannerActive) return;
 
+            const now = Date.now();
+            if (now - AppState.qrLastDecodedAt < CONFIG.SCANNER.qr.decodeIntervalMs) {
+                requestAnimationFrame(scanFrame);
+                return;
+            }
+            AppState.qrLastDecodedAt = now;
+
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -299,6 +326,13 @@ class ScannerManager {
     }
 
     static async handleQRCodeDetected(data) {
+        const now = Date.now();
+        if (AppState.qrProcessing || (now - AppState.qrLastDetectedAt) < CONFIG.SCANNER.qr.detectCooldownMs) {
+            return;
+        }
+        AppState.qrProcessing = true;
+        AppState.qrLastDetectedAt = now;
+
         console.log('[Scanner] QR Code détecté:', data);
         
         let idEmplacement = null;
@@ -343,6 +377,7 @@ class ScannerManager {
             console.warn('[Scanner] Format QR Code non reconnu:', data);
             HapticFeedback.warning();
             UI.showToast(`⚠️ QR Code non reconnu. Formats acceptés: EMP-{id} ou JSON avec id.`, 'warning');
+            AppState.qrProcessing = false;
             return;
         }
 
@@ -392,6 +427,8 @@ class ScannerManager {
             console.error('[Scanner] Erreur API:', error);
             HapticFeedback.error();
             UI.showToast('❌ Erreur: ' + error.message, 'error');
+        } finally {
+            AppState.qrProcessing = false;
         }
     }
 
@@ -419,25 +456,25 @@ class BarcodeScannerManager {
                 type: 'LiveStream',
                 target: container,
                 constraints: {
-                    width: { min: 640, ideal: 1280, max: 1920 },
-                    height: { min: 480, ideal: 720, max: 1080 },
+                    width: { ideal: CONFIG.SCANNER.barcode.width, max: 1280 },
+                    height: { ideal: CONFIG.SCANNER.barcode.height, max: 720 },
                     facingMode: 'environment', // Caméra arrière
                     aspectRatio: { ideal: 16/9 }
                 },
                 area: { // Zone de scan optimisée
-                    top: "20%",
-                    right: "10%",
-                    left: "10%",
-                    bottom: "20%"
+                    top: "28%",
+                    right: "16%",
+                    left: "16%",
+                    bottom: "28%"
                 }
             },
-            frequency: 10, // Réduire la fréquence pour économiser la batterie
+            frequency: CONFIG.SCANNER.barcode.frequency, // Optimisé mobile
             decoder: {
                 readers: ['code_128_reader'], // Code-barres 128 uniquement
                 multiple: false // Un seul code à la fois
             },
             locate: true, // Localiser le code-barres
-            numOfWorkers: navigator.hardwareConcurrency || 2, // Optimiser selon le CPU
+            numOfWorkers: Math.min(2, navigator.hardwareConcurrency || 2), // Limiter charge CPU
             locator: {
                 patchSize: 'medium',
                 halfSample: true // Performance mobile
@@ -457,18 +494,33 @@ class BarcodeScannerManager {
 
         Quagga.onDetected((result) => {
             if (result && result.codeResult && result.codeResult.code) {
-                this.handleBarcodeDetected(result.codeResult.code);
+                const code = result.codeResult.code;
+                const now = Date.now();
+                if (
+                    AppState.barcodeProcessing ||
+                    (AppState.barcodeLastCode === code && (now - AppState.barcodeLastDetectedAt) < CONFIG.SCANNER.barcode.detectCooldownMs)
+                ) {
+                    return;
+                }
+
+                AppState.barcodeLastCode = code;
+                AppState.barcodeLastDetectedAt = now;
+                this.handleBarcodeDetected(code);
             }
         });
     }
 
     static async handleBarcodeDetected(codeBarre) {
+        if (AppState.barcodeProcessing) return;
+        AppState.barcodeProcessing = true;
+
         console.log('[Barcode] Détecté:', codeBarre);
 
         const numOrdre = parseInt(codeBarre, 10);
         if (isNaN(numOrdre) || numOrdre <= 0) {
             HapticFeedback.warning();
             UI.showToast('⚠️ Code-barres invalide', 'warning');
+            AppState.barcodeProcessing = false;
             return;
         }
 
@@ -476,6 +528,7 @@ class BarcodeScannerManager {
         if (AppState.biensScannés.some(b => b.num_ordre === numOrdre)) {
             HapticFeedback.warning();
             UI.showToast('⚠️ Déjà scanné', 'warning');
+            AppState.barcodeProcessing = false;
             return;
         }
 
@@ -502,6 +555,10 @@ class BarcodeScannerManager {
             };
             UI.showModalEtatBien(bienNonAttendu);
         }
+
+        setTimeout(() => {
+            AppState.barcodeProcessing = false;
+        }, CONFIG.SCANNER.barcode.detectCooldownMs);
     }
 
     static stopBarcodeScanner() {
