@@ -3,7 +3,7 @@
  * Gère le cache, le mode offline et la synchronisation en arrière-plan
  */
 
-const CACHE_NAME = 'inventaire-scanner-v2';
+const CACHE_NAME = 'inventaire-scanner-v3';
 const ASSETS_TO_CACHE = [
   '/pwa/',
   '/pwa/index.html',

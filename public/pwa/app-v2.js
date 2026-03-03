@@ -21,10 +21,10 @@ const CONFIG = {
             detectCooldownMs: 1200
         },
         barcode: {
-            width: 960,
-            height: 540,
-            frequency: 8,
-            detectCooldownMs: 700
+            width: 640,
+            height: 480,
+            frequency: 16,
+            detectCooldownMs: 250
         }
     }
 };
@@ -95,7 +95,48 @@ const AppState = {
     barcodeProcessing: false,
     barcodeLastDetectedAt: 0,
     barcodeLastCode: null,
+    barcodeDetectedHandler: null,
 };
+
+// ===========================================
+// NORMALISATION CODES-BARRES / NUM_ORDRE
+// ===========================================
+
+function normalizeNumOrdre(value) {
+    if (value === null || value === undefined) return null;
+    const num = Number.parseInt(String(value).trim(), 10);
+    return Number.isFinite(num) && num > 0 ? num : null;
+}
+
+function extractNumOrdreFromBarcode(rawCode) {
+    if (!rawCode) return null;
+
+    // Nettoyer les caractères de contrôle parfois renvoyés par le scanner
+    const cleaned = String(rawCode)
+        .replace(/[\u0000-\u001F\u007F]/g, '')
+        .trim();
+
+    if (!cleaned) return null;
+
+    // 1) Format numérique pur (ex: "12345")
+    if (/^\d+$/.test(cleaned)) {
+        return normalizeNumOrdre(cleaned);
+    }
+
+    // 2) Format type code inventaire "XXX/YYY/.../12345"
+    const bySlash = cleaned.match(/\/(\d+)\s*$/);
+    if (bySlash) {
+        return normalizeNumOrdre(bySlash[1]);
+    }
+
+    // 3) Format préfixé type "GS12345"
+    const bySuffix = cleaned.match(/(\d+)\s*$/);
+    if (bySuffix) {
+        return normalizeNumOrdre(bySuffix[1]);
+    }
+
+    return null;
+}
 
 // ===========================================
 // API HELPER
@@ -393,16 +434,19 @@ class ScannerManager {
             console.log('[Scanner] Réponse API:', response);
             
             const dejaScannesSet = new Set(
-                (response.biens_deja_scannes || []).map(scan => parseInt(scan.num_ordre, 10))
+                (response.biens_deja_scannes || []).map(scan => normalizeNumOrdre(scan.num_ordre))
             );
 
             AppState.currentEmplacement = response.emplacement;
             // En réouverture, ne garder que les biens restants à scanner
-            AppState.biensAttendus = (response.biens || []).filter(
-                bien => !dejaScannesSet.has(parseInt(bien.num_ordre, 10))
-            );
+            AppState.biensAttendus = (response.biens || [])
+                .map(bien => ({
+                    ...bien,
+                    num_ordre: normalizeNumOrdre(bien.num_ordre)
+                }))
+                .filter(bien => bien.num_ordre && !dejaScannesSet.has(bien.num_ordre));
             AppState.biensScannés = (response.biens_deja_scannes || []).map(scan => ({
-                num_ordre: parseInt(scan.num_ordre, 10),
+                num_ordre: normalizeNumOrdre(scan.num_ordre),
                 etat_id: null, // Historique existant sans correspondance fiable idEtat
                 photo: null,
                 designation: null,
@@ -448,7 +492,13 @@ class ScannerManager {
 class BarcodeScannerManager {
     static startBarcodeScanner() {
         const container = document.getElementById('barcode-scanner-container');
-        
+
+        // Nettoyer l'ancien listener pour éviter l'accumulation de callbacks
+        if (AppState.barcodeDetectedHandler && typeof Quagga.offDetected === 'function') {
+            try { Quagga.offDetected(AppState.barcodeDetectedHandler); } catch (_) {}
+            AppState.barcodeDetectedHandler = null;
+        }
+
         // Configuration optimisée pour mobile Android et iOS
 
         Quagga.init({
@@ -456,16 +506,16 @@ class BarcodeScannerManager {
                 type: 'LiveStream',
                 target: container,
                 constraints: {
-                    width: { ideal: CONFIG.SCANNER.barcode.width, max: 1280 },
-                    height: { ideal: CONFIG.SCANNER.barcode.height, max: 720 },
+                    width: { ideal: CONFIG.SCANNER.barcode.width, max: 960 },
+                    height: { ideal: CONFIG.SCANNER.barcode.height, max: 540 },
                     facingMode: 'environment', // Caméra arrière
                     aspectRatio: { ideal: 16/9 }
                 },
                 area: { // Zone de scan optimisée
-                    top: "28%",
-                    right: "16%",
-                    left: "16%",
-                    bottom: "28%"
+                    top: "22%",
+                    right: "10%",
+                    left: "10%",
+                    bottom: "22%"
                 }
             },
             frequency: CONFIG.SCANNER.barcode.frequency, // Optimisé mobile
@@ -473,10 +523,10 @@ class BarcodeScannerManager {
                 readers: ['code_128_reader'], // Code-barres 128 uniquement
                 multiple: false // Un seul code à la fois
             },
-            locate: true, // Localiser le code-barres
+            locate: false, // Plus rapide: scanner centré dans la zone
             numOfWorkers: Math.min(2, navigator.hardwareConcurrency || 2), // Limiter charge CPU
             locator: {
-                patchSize: 'medium',
+                patchSize: 'large',
                 halfSample: true // Performance mobile
             }
         }, (err) => {
@@ -492,7 +542,7 @@ class BarcodeScannerManager {
             console.log('[Barcode] Scanner démarré');
         });
 
-        Quagga.onDetected((result) => {
+        AppState.barcodeDetectedHandler = (result) => {
             if (result && result.codeResult && result.codeResult.code) {
                 const code = result.codeResult.code;
                 const now = Date.now();
@@ -507,7 +557,8 @@ class BarcodeScannerManager {
                 AppState.barcodeLastDetectedAt = now;
                 this.handleBarcodeDetected(code);
             }
-        });
+        };
+        Quagga.onDetected(AppState.barcodeDetectedHandler);
     }
 
     static async handleBarcodeDetected(codeBarre) {
@@ -516,10 +567,10 @@ class BarcodeScannerManager {
 
         console.log('[Barcode] Détecté:', codeBarre);
 
-        const numOrdre = parseInt(codeBarre, 10);
-        if (isNaN(numOrdre) || numOrdre <= 0) {
+        const numOrdre = extractNumOrdreFromBarcode(codeBarre);
+        if (!numOrdre) {
             HapticFeedback.warning();
-            UI.showToast('⚠️ Code-barres invalide', 'warning');
+            UI.showToast('⚠️ Code-barres invalide ou format non reconnu', 'warning');
             AppState.barcodeProcessing = false;
             return;
         }
@@ -563,6 +614,10 @@ class BarcodeScannerManager {
 
     static stopBarcodeScanner() {
         if (Quagga) {
+            if (AppState.barcodeDetectedHandler && typeof Quagga.offDetected === 'function') {
+                try { Quagga.offDetected(AppState.barcodeDetectedHandler); } catch (_) {}
+                AppState.barcodeDetectedHandler = null;
+            }
             Quagga.stop();
             console.log('[Barcode] Scanner arrêté');
         }
