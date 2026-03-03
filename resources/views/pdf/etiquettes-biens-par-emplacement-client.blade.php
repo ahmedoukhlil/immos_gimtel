@@ -227,8 +227,8 @@
                         const totalPages = Math.ceil(totalSlots / this.TOTAL);
 
                         const mm = this.MM;
-                        const BC_TOP_OFFSET  = 4.0 * mm;
-                        const BC_HEIGHT      = 8.0 * mm;
+                        const BC_TOP_OFFSET  = 3.5 * mm;
+                        const BC_HEIGHT      = 9.5 * mm;
                         const CODE_Y_OFFSET  = 15.5 * mm;
                         const DESIG_Y_OFFSET = 19.0 * mm;
                         const FS_CODE = 7;
@@ -275,7 +275,7 @@
                                     // ══════ PREMIÈRE ÉTIQUETTE : QR CODE EMPLACEMENT ══════
                                     // Même layout que les barcodes : image en haut (zone 4mm→12mm),
                                     // texte 1 centré à 15.5mm, texte 2 centré à 19mm
-                                    const qrSize = BC_HEIGHT; // 8mm, même hauteur que les barcodes
+                                    const qrSize = BC_HEIGHT; // 9.5mm, même hauteur que les barcodes
                                     const qrX = labelX + (this.LABEL_W - qrSize) / 2;
                                     const qrY = labelTopY - BC_TOP_OFFSET - qrSize;
                                     page.drawImage(qrImg, { x: qrX, y: qrY, width: qrSize, height: qrSize });
@@ -321,7 +321,7 @@
                                 canvas.style.cssText = 'position:absolute;left:-9999px';
                                 document.body.appendChild(canvas);
                                 JsBarcode(canvas, val, {
-                                    format: 'CODE128', width: 1.5, height: 50,
+                                    format: 'CODE128', width: 1.8, height: 60,
                                     displayValue: false, background: '#fff',
                                     lineColor: '#000', margin: 0
                                 });

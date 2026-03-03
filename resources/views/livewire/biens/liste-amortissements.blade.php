@@ -42,6 +42,13 @@
             </div>
         </div>
 
+        @if($amortissementUnavailable ?? false)
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                Les colonnes nécessaires à l'amortissement ne sont pas disponibles dans la table <code>gesimmo</code>.
+                Exécutez les migrations pour activer ce module.
+            </div>
+        @endif
+
         {{-- Cards totaux --}}
         @php $totaux = $this->totaux; @endphp
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">

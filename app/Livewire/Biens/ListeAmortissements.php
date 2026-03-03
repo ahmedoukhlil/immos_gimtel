@@ -5,6 +5,8 @@ namespace App\Livewire\Biens;
 use App\Models\Gesimmo;
 use App\Models\Categorie;
 use App\Services\AmortissementService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Schema;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -17,6 +19,7 @@ class ListeAmortissements extends Component
     public $sortField = 'NumOrdre';
     public $sortDirection = 'asc';
     public $perPage = 20;
+    protected ?bool $amortissementColumnsAvailable = null;
 
     protected $queryString = [
         'filterCategorie' => ['except' => ''],
@@ -50,6 +53,20 @@ class ListeAmortissements extends Component
         $this->resetPage();
     }
 
+    private function hasAmortissementColumns(): bool
+    {
+        if ($this->amortissementColumnsAvailable !== null) {
+            return $this->amortissementColumnsAvailable;
+        }
+
+        $this->amortissementColumnsAvailable = Schema::hasColumns('gesimmo', [
+            'valeur_acquisition',
+            'date_mise_en_service',
+        ]);
+
+        return $this->amortissementColumnsAvailable;
+    }
+
     public function getCategoriesProperty()
     {
         return Categorie::whereNotNull('duree_amortissement')
@@ -64,6 +81,10 @@ class ListeAmortissements extends Component
     public function getExercicesProperty(): array
     {
         $anneeActuelle = now()->year;
+
+        if (!$this->hasAmortissementColumns()) {
+            return [$anneeActuelle];
+        }
 
         $premiereMiseEnService = Gesimmo::whereNotNull('date_mise_en_service')
             ->whereNotNull('valeur_acquisition')
@@ -99,6 +120,17 @@ class ListeAmortissements extends Component
      */
     public function getTotauxProperty(): array
     {
+        $exercice = !empty($this->filterExercice) ? (int) $this->filterExercice : now()->year;
+
+        if (!$this->hasAmortissementColumns()) {
+            return [
+                'total_valeur' => 0,
+                'total_dotation' => 0,
+                'total_vnc' => 0,
+                'exercice' => $exercice,
+            ];
+        }
+
         $query = Gesimmo::with('categorie')
             ->whereNotNull('valeur_acquisition')
             ->where('valeur_acquisition', '>=', AmortissementService::SEUIL_AMORTISSEMENT)
@@ -114,7 +146,6 @@ class ListeAmortissements extends Component
         $totalValeur = 0;
         $totalDotation = 0;
         $totalVNC = 0;
-        $exercice = !empty($this->filterExercice) ? (int) $this->filterExercice : now()->year;
 
         foreach ($biens as $bien) {
             if (!$service->isAmortissable($bien)) {
@@ -152,6 +183,25 @@ class ListeAmortissements extends Component
 
     public function render()
     {
+        $exercice = !empty($this->filterExercice) ? (int) $this->filterExercice : now()->year;
+        $amortissementUnavailable = !$this->hasAmortissementColumns();
+
+        if ($amortissementUnavailable) {
+            $biens = new LengthAwarePaginator(
+                [],
+                0,
+                $this->perPage,
+                LengthAwarePaginator::resolveCurrentPage(),
+                ['path' => request()->url(), 'pageName' => 'page']
+            );
+
+            return view('livewire.biens.liste-amortissements', [
+                'biens' => $biens,
+                'exercice' => $exercice,
+                'amortissementUnavailable' => true,
+            ]);
+        }
+
         $query = Gesimmo::with(['designation', 'categorie'])
             ->whereNotNull('valeur_acquisition')
             ->where('valeur_acquisition', '>=', AmortissementService::SEUIL_AMORTISSEMENT)
@@ -165,7 +215,6 @@ class ListeAmortissements extends Component
             ->paginate($this->perPage);
 
         $service = app(AmortissementService::class);
-        $exercice = !empty($this->filterExercice) ? (int) $this->filterExercice : now()->year;
 
         $biensAvecAmortissement = $biens->through(function ($bien) use ($service, $exercice) {
             $tableau = $service->calculerTableau($bien);
@@ -195,6 +244,7 @@ class ListeAmortissements extends Component
         return view('livewire.biens.liste-amortissements', [
             'biens' => $biensAvecAmortissement,
             'exercice' => $exercice,
+            'amortissementUnavailable' => false,
         ]);
     }
 }

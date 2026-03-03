@@ -304,7 +304,7 @@
                         class="w-full mx-auto cursor-pointer hover:opacity-80 transition-opacity bg-white p-2 rounded border border-gray-200"
                         onclick="document.getElementById('barcode-modal').classList.remove('hidden')"
                         title="Cliquez pour agrandir">
-                        <svg id="barcode-svg-{{ $bien->NumOrdre }}" width="100%" height="40" style="max-width: 100%; display: block;"></svg>
+                        <svg id="barcode-svg-{{ $bien->NumOrdre }}" width="100%" height="56" style="max-width: 100%; display: block;"></svg>
                     </div>
                     <p class="text-xs text-gray-500 mt-1.5">Code 128 - 89mm x 36mm</p>
                     <div class="mt-2 space-y-1">
@@ -517,8 +517,8 @@
                     </svg>
                 </button>
                 <div class="w-full flex items-center justify-center bg-white p-6 rounded-lg border border-gray-200">
-                    <div id="barcode-modal-placeholder-{{ $bien->NumOrdre }}" style="min-height: 120px; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 600px;">
-                        <svg id="barcode-svg-modal-{{ $bien->NumOrdre }}" width="100%" height="140" style="max-width: 100%; display: block;"></svg>
+                    <div id="barcode-modal-placeholder-{{ $bien->NumOrdre }}" style="min-height: 150px; display: flex; align-items: center; justify-content: center; width: 100%; max-width: 700px;">
+                        <svg id="barcode-svg-modal-{{ $bien->NumOrdre }}" width="100%" height="180" style="max-width: 100%; display: block;"></svg>
                     </div>
                 </div>
                 <div class="text-center mt-4 space-y-1">
@@ -574,14 +574,14 @@
             const svgMain = document.getElementById('barcode-svg-' + bienId);
             if (svgMain) {
                 try {
-                    JsBarcode(svgMain, code, { format: "CODE128", width: 1.5, height: 35, displayValue: false, background: "#ffffff", lineColor: "#000000", margin: 4 });
+                    JsBarcode(svgMain, code, { format: "CODE128", width: 2.2, height: 52, displayValue: false, background: "#ffffff", lineColor: "#000000", margin: 6 });
                 } catch (e) { return false; }
             }
             
             const svgModal = document.getElementById('barcode-svg-modal-' + bienId);
             if (svgModal) {
                 try {
-                    JsBarcode(svgModal, code, { format: "CODE128", width: 3, height: 100, displayValue: false, background: "#ffffff", lineColor: "#000000", margin: 15 });
+                    JsBarcode(svgModal, code, { format: "CODE128", width: 4, height: 130, displayValue: false, background: "#ffffff", lineColor: "#000000", margin: 18 });
                 } catch (e) {}
             }
             
