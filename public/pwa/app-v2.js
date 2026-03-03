@@ -96,6 +96,11 @@ const AppState = {
     barcodeLastDetectedAt: 0,
     barcodeLastCode: null,
     barcodeDetectedHandler: null,
+    barcodeModalOpen: false,
+    biensAttendusIndex: new Map(), // key: num_ordre
+    biensScannesIndex: new Map(),  // key: num_ordre
+    lastToastKey: null,
+    lastToastAt: 0,
 };
 
 // ===========================================
@@ -136,6 +141,20 @@ function extractNumOrdreFromBarcode(rawCode) {
     }
 
     return null;
+}
+
+function rebuildBiensIndexes() {
+    AppState.biensAttendusIndex = new Map(
+        (AppState.biensAttendus || [])
+            .filter(b => b && b.num_ordre)
+            .map(b => [b.num_ordre, b])
+    );
+
+    AppState.biensScannesIndex = new Map(
+        (AppState.biensScannés || [])
+            .filter(b => b && b.num_ordre)
+            .map(b => [b.num_ordre, b])
+    );
 }
 
 // ===========================================
@@ -455,6 +474,7 @@ class ScannerManager {
                 emplacement_initial: null,
                 is_preloaded_expected: true
             }));
+            rebuildBiensIndexes();
 
             HapticFeedback.medium();
             UI.showEmplacementView();
@@ -547,6 +567,7 @@ class BarcodeScannerManager {
                 const code = result.codeResult.code;
                 const now = Date.now();
                 if (
+                    AppState.barcodeModalOpen ||
                     AppState.barcodeProcessing ||
                     (AppState.barcodeLastCode === code && (now - AppState.barcodeLastDetectedAt) < CONFIG.SCANNER.barcode.detectCooldownMs)
                 ) {
@@ -576,7 +597,7 @@ class BarcodeScannerManager {
         }
 
         // Vérifier si déjà scanné
-        if (AppState.biensScannés.some(b => b.num_ordre === numOrdre)) {
+        if (AppState.biensScannesIndex.has(numOrdre)) {
             HapticFeedback.warning();
             UI.showToast('⚠️ Déjà scanné', 'warning');
             AppState.barcodeProcessing = false;
@@ -584,7 +605,7 @@ class BarcodeScannerManager {
         }
 
         // Chercher dans les biens attendus de cet emplacement
-        const bien = AppState.biensAttendus.find(b => b.num_ordre === numOrdre);
+        const bien = AppState.biensAttendusIndex.get(numOrdre);
 
         if (bien) {
             HapticFeedback.light();
@@ -607,9 +628,7 @@ class BarcodeScannerManager {
             UI.showModalEtatBien(bienNonAttendu);
         }
 
-        setTimeout(() => {
-            AppState.barcodeProcessing = false;
-        }, CONFIG.SCANNER.barcode.detectCooldownMs);
+        // Le reset est géré à la fermeture/confirmation de la modale
     }
 
     static stopBarcodeScanner() {
@@ -686,10 +705,11 @@ class UI {
     static updateBiensList() {
         const list = document.getElementById('biens-list');
         list.innerHTML = '';
+        const scansByNum = AppState.biensScannesIndex;
 
         // Afficher les biens attendus
         AppState.biensAttendus.forEach(bien => {
-            const scanData = AppState.biensScannés.find(b => b.num_ordre === bien.num_ordre);
+            const scanData = scansByNum.get(bien.num_ordre);
             const isScanned = !!scanData;
             const etatObj = scanData && scanData.etat_id ? AppState.etats.find(e => e.id === scanData.etat_id) : null;
             const isDefectueux = etatObj && etatObj.require_photo;
@@ -748,9 +768,8 @@ class UI {
 
     static updateProgress() {
         const total = AppState.biensAttendus.length;
-        const scannedAttendus = AppState.biensScannés.filter(
-            s => AppState.biensAttendus.some(b => b.num_ordre === s.num_ordre)
-        ).length;
+        const scannedAttendus = Array.from(AppState.biensScannesIndex.keys())
+            .filter(num => AppState.biensAttendusIndex.has(num)).length;
         const scannedDeplaces = AppState.biensScannés.filter(
             s => s.statut === 'non_attendu' || s.statut === 'deplace'
         ).length;
@@ -798,6 +817,7 @@ class UI {
 
     static showModalEtatBien(bien) {
         AppState.modalBienEnCours = bien;
+        AppState.barcodeModalOpen = true;
         const modal = document.getElementById('modal-etat-bien');
         document.getElementById('modal-etat-designation').textContent = `${bien.designation} (N° ${bien.num_ordre})`;
         
@@ -839,6 +859,8 @@ class UI {
 
     static hideModalEtatBien() {
         AppState.modalBienEnCours = null;
+        AppState.barcodeModalOpen = false;
+        AppState.barcodeProcessing = false;
         document.getElementById('modal-etat-bien').classList.add('hidden');
     }
 
@@ -855,6 +877,7 @@ class UI {
             statut: bien.statut || 'present',
             emplacement_initial: bien.emplacement_initial || null
         });
+        rebuildBiensIndexes();
         
         const isNonAttendu = bien.statut === 'non_attendu' || bien.statut === 'deplace';
         HapticFeedback.success();
@@ -939,6 +962,14 @@ class UI {
     }
 
     static showToast(message, type = 'info') {
+        const now = Date.now();
+        const toastKey = `${type}:${message}`;
+        if (AppState.lastToastKey === toastKey && (now - AppState.lastToastAt) < 900) {
+            return;
+        }
+        AppState.lastToastKey = toastKey;
+        AppState.lastToastAt = now;
+
         const container = document.getElementById('toast-container');
         
         const colors = {
@@ -1028,6 +1059,9 @@ document.getElementById('btn-nouveau-scan').addEventListener('click', () => {
     AppState.currentEmplacement = null;
     AppState.biensAttendus = [];
     AppState.biensScannés = [];
+    AppState.barcodeModalOpen = false;
+    AppState.barcodeProcessing = false;
+    rebuildBiensIndexes();
     UI.showView('scanner');
 });
 
