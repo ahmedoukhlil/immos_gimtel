@@ -97,6 +97,9 @@ const AppState = {
     barcodeLastCode: null,
     barcodeDetectedHandler: null,
     barcodeModalOpen: false,
+    barcodeScannerActive: false,
+    barcodeDetectorNative: null,
+    barcodeNativeLoopActive: false,
     biensAttendusIndex: new Map(), // key: num_ordre
     biensScannesIndex: new Map(),  // key: num_ordre
     lastToastKey: null,
@@ -513,6 +516,7 @@ class ScannerManager {
 class BarcodeScannerManager {
     static startBarcodeScanner() {
         const container = document.getElementById('barcode-scanner-container');
+        AppState.barcodeScannerActive = true;
 
         // Nettoyer l'ancien listener pour éviter l'accumulation de callbacks
         if (AppState.barcodeDetectedHandler && typeof Quagga.offDetected === 'function') {
@@ -563,6 +567,9 @@ class BarcodeScannerManager {
             HapticFeedback.light();
             console.log('[Barcode] Scanner démarré');
 
+            // Assistance de détection native (Chrome/Android récents)
+            this.startNativeAssist(container);
+
             // Tenter d'activer autofocus continu quand l'appareil le permet
             try {
                 const track = Quagga?.CameraAccess?.getActiveTrack?.();
@@ -591,6 +598,55 @@ class BarcodeScannerManager {
             }
         };
         Quagga.onDetected(AppState.barcodeDetectedHandler);
+    }
+
+    static startNativeAssist(container) {
+        if (typeof window.BarcodeDetector === 'undefined') return;
+
+        try {
+            AppState.barcodeDetectorNative = new window.BarcodeDetector({ formats: ['code_128'] });
+        } catch (_) {
+            AppState.barcodeDetectorNative = null;
+            return;
+        }
+
+        if (!AppState.barcodeDetectorNative || AppState.barcodeNativeLoopActive) return;
+        AppState.barcodeNativeLoopActive = true;
+
+        const loop = async () => {
+            if (!AppState.barcodeNativeLoopActive || !AppState.barcodeScannerActive) return;
+
+            try {
+                const video = container.querySelector('video');
+                if (video && video.readyState >= 2) {
+                    const barcodes = await AppState.barcodeDetectorNative.detect(video);
+                    if (barcodes && barcodes.length > 0) {
+                        const rawValue = String(barcodes[0].rawValue || '').trim();
+                        if (rawValue) {
+                            const now = Date.now();
+                            if (
+                                !AppState.barcodeModalOpen &&
+                                !AppState.barcodeProcessing &&
+                                !(
+                                    AppState.barcodeLastCode === rawValue &&
+                                    (now - AppState.barcodeLastDetectedAt) < CONFIG.SCANNER.barcode.detectCooldownMs
+                                )
+                            ) {
+                                AppState.barcodeLastCode = rawValue;
+                                AppState.barcodeLastDetectedAt = now;
+                                this.handleBarcodeDetected(rawValue);
+                            }
+                        }
+                    }
+                }
+            } catch (_) {
+                // Ignore les erreurs sporadiques du détecteur natif
+            }
+
+            setTimeout(loop, 120);
+        };
+
+        setTimeout(loop, 250);
     }
 
     static async handleBarcodeDetected(codeBarre) {
@@ -648,6 +704,10 @@ class BarcodeScannerManager {
     }
 
     static stopBarcodeScanner() {
+        AppState.barcodeScannerActive = false;
+        AppState.barcodeNativeLoopActive = false;
+        AppState.barcodeDetectorNative = null;
+
         if (Quagga) {
             if (AppState.barcodeDetectedHandler && typeof Quagga.offDetected === 'function') {
                 try { Quagga.offDetected(AppState.barcodeDetectedHandler); } catch (_) {}
