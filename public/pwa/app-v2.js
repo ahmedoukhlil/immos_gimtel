@@ -21,9 +21,9 @@ const CONFIG = {
             detectCooldownMs: 1200
         },
         barcode: {
-            width: 640,
-            height: 480,
-            frequency: 16,
+            width: 960,
+            height: 540,
+            frequency: 20,
             detectCooldownMs: 250
         }
     }
@@ -101,6 +101,7 @@ const AppState = {
     biensScannesIndex: new Map(),  // key: num_ordre
     lastToastKey: null,
     lastToastAt: 0,
+    barcodeLastInvalidAt: 0,
 };
 
 // ===========================================
@@ -526,16 +527,17 @@ class BarcodeScannerManager {
                 type: 'LiveStream',
                 target: container,
                 constraints: {
-                    width: { ideal: CONFIG.SCANNER.barcode.width, max: 960 },
-                    height: { ideal: CONFIG.SCANNER.barcode.height, max: 540 },
+                    width: { ideal: CONFIG.SCANNER.barcode.width, max: 1280 },
+                    height: { ideal: CONFIG.SCANNER.barcode.height, max: 720 },
                     facingMode: 'environment', // Caméra arrière
-                    aspectRatio: { ideal: 16/9 }
+                    aspectRatio: { ideal: 16/9 },
+                    focusMode: 'continuous'
                 },
                 area: { // Zone de scan optimisée
-                    top: "22%",
-                    right: "10%",
-                    left: "10%",
-                    bottom: "22%"
+                    top: "25%",
+                    right: "12%",
+                    left: "12%",
+                    bottom: "25%"
                 }
             },
             frequency: CONFIG.SCANNER.barcode.frequency, // Optimisé mobile
@@ -543,11 +545,11 @@ class BarcodeScannerManager {
                 readers: ['code_128_reader'], // Code-barres 128 uniquement
                 multiple: false // Un seul code à la fois
             },
-            locate: false, // Plus rapide: scanner centré dans la zone
-            numOfWorkers: Math.min(2, navigator.hardwareConcurrency || 2), // Limiter charge CPU
+            locate: true, // Plus robuste: retrouve mieux le code dans la zone
+            numOfWorkers: Math.min(4, Math.max(2, (navigator.hardwareConcurrency || 2) - 1)),
             locator: {
-                patchSize: 'large',
-                halfSample: true // Performance mobile
+                patchSize: 'medium',
+                halfSample: false // Plus précis sur barres fines
             }
         }, (err) => {
             if (err) {
@@ -560,6 +562,15 @@ class BarcodeScannerManager {
             Quagga.start();
             HapticFeedback.light();
             console.log('[Barcode] Scanner démarré');
+
+            // Tenter d'activer autofocus continu quand l'appareil le permet
+            try {
+                const track = Quagga?.CameraAccess?.getActiveTrack?.();
+                const capabilities = track?.getCapabilities?.();
+                if (capabilities?.focusMode?.includes('continuous')) {
+                    track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+                }
+            } catch (_) {}
         });
 
         AppState.barcodeDetectedHandler = (result) => {
@@ -591,7 +602,12 @@ class BarcodeScannerManager {
         const numOrdre = extractNumOrdreFromBarcode(codeBarre);
         if (!numOrdre) {
             HapticFeedback.warning();
-            UI.showToast('⚠️ Code-barres invalide ou format non reconnu', 'warning');
+            const now = Date.now();
+            // Eviter de saturer l'UI avec des toasts d'erreur sur faux positifs
+            if ((now - AppState.barcodeLastInvalidAt) > 1500) {
+                UI.showToast('⚠️ Code-barres invalide ou format non reconnu', 'warning');
+                AppState.barcodeLastInvalidAt = now;
+            }
             AppState.barcodeProcessing = false;
             return;
         }
