@@ -21,9 +21,9 @@ const CONFIG = {
             detectCooldownMs: 1200
         },
         barcode: {
-            width: 960,
-            height: 540,
-            frequency: 20,
+            width: 640,
+            height: 480,
+            frequency: 10,
             detectCooldownMs: 250
         }
     }
@@ -531,17 +531,17 @@ class BarcodeScannerManager {
                 type: 'LiveStream',
                 target: container,
                 constraints: {
-                    width: { ideal: CONFIG.SCANNER.barcode.width, max: 1280 },
-                    height: { ideal: CONFIG.SCANNER.barcode.height, max: 720 },
+                    width: { min: 400, ideal: CONFIG.SCANNER.barcode.width },
+                    height: { min: 300, ideal: CONFIG.SCANNER.barcode.height },
                     facingMode: 'environment', // Caméra arrière
-                    aspectRatio: { ideal: 16/9 },
+                    aspectRatio: { ideal: 4/3 },
                     focusMode: 'continuous'
                 },
                 area: { // Zone de scan optimisée
-                    top: "25%",
-                    right: "12%",
-                    left: "12%",
-                    bottom: "25%"
+                    top: "15%",
+                    right: "5%",
+                    left: "5%",
+                    bottom: "15%"
                 }
             },
             frequency: CONFIG.SCANNER.barcode.frequency, // Optimisé mobile
@@ -550,10 +550,10 @@ class BarcodeScannerManager {
                 multiple: false // Un seul code à la fois
             },
             locate: true, // Plus robuste: retrouve mieux le code dans la zone
-            numOfWorkers: Math.min(4, Math.max(2, (navigator.hardwareConcurrency || 2) - 1)),
+            numOfWorkers: (navigator.hardwareConcurrency || 2) > 4 ? 2 : 1,
             locator: {
                 patchSize: 'medium',
-                halfSample: false // Plus précis sur barres fines
+                halfSample: true // Gain de perf majeur pour mobile
             }
         }, (err) => {
             if (err) {
@@ -612,12 +612,12 @@ class BarcodeScannerManager {
 
         if (!AppState.barcodeDetectorNative || AppState.barcodeNativeLoopActive) return;
         AppState.barcodeNativeLoopActive = true;
+        const video = container.querySelector('video');
 
         const loop = async () => {
             if (!AppState.barcodeNativeLoopActive || !AppState.barcodeScannerActive) return;
 
             try {
-                const video = container.querySelector('video');
                 if (video && video.readyState >= 2) {
                     const barcodes = await AppState.barcodeDetectorNative.detect(video);
                     if (barcodes && barcodes.length > 0) {
@@ -643,7 +643,7 @@ class BarcodeScannerManager {
                 // Ignore les erreurs sporadiques du détecteur natif
             }
 
-            setTimeout(loop, 120);
+            setTimeout(loop, 200);
         };
 
         setTimeout(loop, 250);
