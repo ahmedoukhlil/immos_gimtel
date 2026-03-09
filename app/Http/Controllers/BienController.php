@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Emplacement;
 use App\Models\Gesimmo;
 use App\Http\Requests\StoreBienRequest;
 use App\Http\Requests\UpdateBienRequest;
@@ -274,6 +275,92 @@ class BienController extends Controller
             ]);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Erreur lors de l\'impression des étiquettes: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Affiche la page pour imprimer toutes les étiquettes,
+     * groupées emplacement par emplacement, dans un seul fichier PDF.
+     */
+    public function imprimerEtiquettesTousEmplacements(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'filterLocalisation' => 'nullable|exists:localisation,idLocalisation',
+                'filterAffectation' => 'nullable|exists:affectation,idAffectation',
+            ]);
+
+            $filterLocalisation = $validated['filterLocalisation'] ?? null;
+            $filterAffectation = $validated['filterAffectation'] ?? null;
+
+            $query = Emplacement::with([
+                'localisation',
+                'affectation',
+                'immobilisations' => function ($q) {
+                    $q->with(['designation'])
+                        ->orderBy('NumOrdre');
+                },
+            ])->whereHas('immobilisations');
+
+            if (!empty($filterLocalisation)) {
+                $query->where('idLocalisation', $filterLocalisation);
+            }
+
+            if (!empty($filterAffectation)) {
+                $query->where('idAffectation', $filterAffectation);
+            }
+
+            $emplacements = $query->orderBy('Emplacement')->get();
+
+            if ($emplacements->isEmpty()) {
+                return redirect()->back()->with('error', 'Aucun emplacement avec des biens trouvé pour ces filtres.');
+            }
+
+            $emplacementsData = [];
+            $qrDataUris = [];
+
+            foreach ($emplacements as $emplacement) {
+                $emplacementsData[] = [
+                    'idEmplacement' => $emplacement->idEmplacement,
+                    'Emplacement' => $emplacement->Emplacement,
+                    'CodeEmplacement' => $emplacement->CodeEmplacement,
+                    'localisation' => $emplacement->localisation ? [
+                        'idLocalisation' => $emplacement->localisation->idLocalisation,
+                        'Localisation' => $emplacement->localisation->Localisation,
+                    ] : null,
+                    'affectation' => $emplacement->affectation ? [
+                        'idAffectation' => $emplacement->affectation->idAffectation,
+                        'Affectation' => $emplacement->affectation->Affectation,
+                    ] : null,
+                    'biens' => $emplacement->immobilisations->map(function ($bien) {
+                        return [
+                            'NumOrdre' => $bien->NumOrdre,
+                            'code_formate' => $bien->code_formate ?? '',
+                            'designation' => $bien->designation->designation ?? '',
+                            'barcode_value' => (string) $bien->NumOrdre,
+                        ];
+                    })->values()->all(),
+                ];
+
+                $qrSvg = QrCode::format('svg')
+                    ->size(300)
+                    ->margin(1)
+                    ->errorCorrection('H')
+                    ->generate("EMP-{$emplacement->idEmplacement}");
+
+                $qrDataUris[(string) $emplacement->idEmplacement] = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+            }
+
+            return view('pdf.etiquettes-biens-tous-emplacements-client', [
+                'emplacementsData' => $emplacementsData,
+                'qrDataUris' => $qrDataUris,
+                'filters' => [
+                    'localisation' => $filterLocalisation,
+                    'affectation' => $filterAffectation,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erreur lors de l\'impression groupée: ' . $e->getMessage());
         }
     }
 

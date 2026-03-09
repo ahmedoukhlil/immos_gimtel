@@ -236,6 +236,8 @@ Route::middleware(['auth', 'session.timeout'])->group(function () {
             
             // Impression groupée par emplacement (21 étiquettes par page A4)
             Route::post('/imprimer-etiquettes-par-emplacement', [BienController::class, 'imprimerEtiquettesParEmplacement'])->name('imprimer-etiquettes-par-emplacement');
+            // Impression de toutes les étiquettes, groupées par emplacement (un seul fichier)
+            Route::post('/imprimer-etiquettes-tous-emplacements', [BienController::class, 'imprimerEtiquettesTousEmplacements'])->name('imprimer-etiquettes-tous-emplacements');
             // Impression groupée par intervalle de NumOrdre (33 étiquettes par page A4)
             Route::post('/imprimer-etiquettes-par-intervalle', [BienController::class, 'imprimerEtiquettesParIntervalle'])->name('imprimer-etiquettes-par-intervalle');
             
