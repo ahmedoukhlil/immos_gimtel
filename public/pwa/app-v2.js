@@ -95,7 +95,6 @@ const AppState = {
     barcodeProcessing: false,
     barcodeLastDetectedAt: 0,
     barcodeLastCode: null,
-    barcodeDetectedHandler: null,
     barcodeModalOpen: false,
     barcodeScannerActive: false,
     barcodeDetectorNative: null,
@@ -108,7 +107,7 @@ const AppState = {
 };
 
 // ===========================================
-// NORMALISATION CODES-BARRES / NUM_ORDRE
+// NORMALISATION CODES SCANNES / NUM_ORDRE
 // ===========================================
 
 function normalizeNumOrdre(value) {
