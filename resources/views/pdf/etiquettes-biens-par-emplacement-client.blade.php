@@ -150,7 +150,6 @@
     </div>
 
     {{-- Bibliothèques JS --}}
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
     <script>
@@ -208,6 +207,29 @@
                 get ROW_PITCH() { return this.LABEL_H + this.ROW_GAP; },
 
                 setStatus(type, text) { this.statusType = type; this.statusText = text; },
+
+                async dataUriToEmbeddedPng(pdfDoc, dataUri, size = 300) {
+                    return await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = async () => {
+                            const c = document.createElement('canvas');
+                            c.width = size;
+                            c.height = size;
+                            const ctx = c.getContext('2d');
+                            ctx.fillStyle = '#fff';
+                            ctx.fillRect(0, 0, size, size);
+                            ctx.drawImage(img, 0, 0, size, size);
+                            try {
+                                const embedded = await pdfDoc.embedPng(c.toDataURL('image/png'));
+                                resolve(embedded);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        };
+                        img.onerror = () => reject(new Error('QR bien non lisible'));
+                        img.src = dataUri;
+                    });
+                },
 
                 async generate() {
                     this.loading = true;
@@ -317,15 +339,12 @@
                                 const desig = String(b.designation || '').trim();
                                 if (!val) continue;
 
-                                const qrDataUrl = await QRCode.toDataURL(val, {
-                                    errorCorrectionLevel: 'M',
-                                    margin: 0,
-                                    width: 220
-                                });
-                                const img = await pdfDoc.embedPng(qrDataUrl);
-                                const qrY = labelTopY - BC_TOP_OFFSET - BC_SIZE;
-                                const qrX = labelX + (this.LABEL_W - BC_SIZE) / 2;
-                                page.drawImage(img, { x: qrX, y: qrY, width: BC_SIZE, height: BC_SIZE });
+                                if (b.qr_data_uri) {
+                                    const img = await this.dataUriToEmbeddedPng(pdfDoc, String(b.qr_data_uri), 220);
+                                    const qrY = labelTopY - BC_TOP_OFFSET - BC_SIZE;
+                                    const qrX = labelX + (this.LABEL_W - BC_SIZE) / 2;
+                                    page.drawImage(img, { x: qrX, y: qrY, width: BC_SIZE, height: BC_SIZE });
+                                }
 
                                 if (code) {
                                     const tw = font.widthOfTextAtSize(code, FS_CODE);

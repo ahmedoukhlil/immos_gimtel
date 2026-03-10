@@ -67,7 +67,6 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
     <script>
@@ -108,6 +107,29 @@
                 },
                 get ROW_PITCH() { return this.LABEL_H + this.ROW_GAP; },
 
+                async dataUriToEmbeddedPng(pdfDoc, dataUri, size = 300) {
+                    return await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = async () => {
+                            const c = document.createElement('canvas');
+                            c.width = size;
+                            c.height = size;
+                            const ctx = c.getContext('2d');
+                            ctx.fillStyle = '#fff';
+                            ctx.fillRect(0, 0, size, size);
+                            ctx.drawImage(img, 0, 0, size, size);
+                            try {
+                                const embedded = await pdfDoc.embedPng(c.toDataURL('image/png'));
+                                resolve(embedded);
+                            } catch (e) {
+                                reject(e);
+                            }
+                        };
+                        img.onerror = () => reject(new Error('QR bien non lisible'));
+                        img.src = dataUri;
+                    });
+                },
+
                 buildSlots() {
                     const slots = [];
                     this.emplacementsData.forEach((emp) => {
@@ -124,6 +146,7 @@
                                 barcode_value: String(b.barcode_value || b.NumOrdre || '').trim(),
                                 code_formate: String(b.code_formate || '').trim(),
                                 designation: String(b.designation || '').trim(),
+                                qr_data_uri: String(b.qr_data_uri || '').trim(),
                             });
                         });
                     });
@@ -231,13 +254,8 @@
                                         color: rgb(0.2, 0.2, 0.2),
                                     });
                                 } else {
-                                    if (item.barcode_value) {
-                                        const qrDataUrl = await QRCode.toDataURL(item.barcode_value, {
-                                            errorCorrectionLevel: 'M',
-                                            margin: 0,
-                                            width: 220
-                                        });
-                                        const img = await pdfDoc.embedPng(qrDataUrl);
+                                    if (item.qr_data_uri) {
+                                        const img = await this.dataUriToEmbeddedPng(pdfDoc, item.qr_data_uri, 220);
                                         const qrY = labelTopY - BC_TOP_OFFSET - BC_SIZE;
                                         const qrX = labelX + (this.LABEL_W - BC_SIZE) / 2;
                                         page.drawImage(img, { x: qrX, y: qrY, width: BC_SIZE, height: BC_SIZE });

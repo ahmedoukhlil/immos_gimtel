@@ -249,12 +249,19 @@ class BienController extends Controller
 
             // Préparer les données pour le JavaScript
             $biensData = $biens->map(function($bien) {
+                $qrSvg = QrCode::format('svg')
+                    ->size(220)
+                    ->margin(0)
+                    ->errorCorrection('M')
+                    ->generate((string) $bien->NumOrdre);
+
                 return [
                     'NumOrdre' => $bien->NumOrdre,
                     'code_formate' => $bien->code_formate ?? '',
                     'designation' => $bien->designation->designation ?? '',
                     // Pour le code-barres, on utilise uniquement NumOrdre
                     'barcode_value' => (string)$bien->NumOrdre,
+                    'qr_data_uri' => 'data:image/svg+xml;base64,' . base64_encode($qrSvg),
                 ];
             })->toArray();
 
@@ -333,11 +340,18 @@ class BienController extends Controller
                         'Affectation' => $emplacement->affectation->Affectation,
                     ] : null,
                     'biens' => $emplacement->immobilisations->map(function ($bien) {
+                        $qrSvg = QrCode::format('svg')
+                            ->size(220)
+                            ->margin(0)
+                            ->errorCorrection('M')
+                            ->generate((string) $bien->NumOrdre);
+
                         return [
                             'NumOrdre' => $bien->NumOrdre,
                             'code_formate' => $bien->code_formate ?? '',
                             'designation' => $bien->designation->designation ?? '',
                             'barcode_value' => (string) $bien->NumOrdre,
+                            'qr_data_uri' => 'data:image/svg+xml;base64,' . base64_encode($qrSvg),
                         ];
                     })->values()->all(),
                 ];
@@ -397,11 +411,18 @@ class BienController extends Controller
             }
 
             $biensData = $biens->map(function ($bien) {
+                $qrSvg = QrCode::format('svg')
+                    ->size(220)
+                    ->margin(0)
+                    ->errorCorrection('M')
+                    ->generate((string) $bien->NumOrdre);
+
                 return [
                     'NumOrdre' => $bien->NumOrdre,
                     'code_formate' => $bien->code_formate ?? '',
                     'designation' => $bien->designation->designation ?? '',
                     'barcode_value' => (string) $bien->NumOrdre,
+                    'qr_data_uri' => 'data:image/svg+xml;base64,' . base64_encode($qrSvg),
                 ];
             })->toArray();
 
