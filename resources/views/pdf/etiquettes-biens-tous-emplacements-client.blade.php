@@ -67,7 +67,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
     <script>
@@ -154,7 +154,7 @@
 
                         const mm = this.MM;
                         const BC_TOP_OFFSET = 3.5 * mm;
-                        const BC_HEIGHT = 9.5 * mm;
+                        const BC_SIZE = 9.5 * mm;
                         const CODE_Y_OFFSET = 15.5 * mm;
                         const DESIG_Y_OFFSET = 19.0 * mm;
                         const FS_CODE = 7;
@@ -200,7 +200,7 @@
                                             image.src = item.qrDataUri;
                                         });
 
-                                        const qrSize = BC_HEIGHT;
+                                        const qrSize = BC_SIZE;
                                         const qrX = labelX + (this.LABEL_W - qrSize) / 2;
                                         const qrY = labelTopY - BC_TOP_OFFSET - qrSize;
                                         page.drawImage(img, { x: qrX, y: qrY, width: qrSize, height: qrSize });
@@ -232,30 +232,15 @@
                                     });
                                 } else {
                                     if (item.barcode_value) {
-                                        const canvas = document.createElement('canvas');
-                                        canvas.style.cssText = 'position:absolute;left:-9999px';
-                                        document.body.appendChild(canvas);
-                                        JsBarcode(canvas, item.barcode_value, {
-                                            format: 'CODE128',
-                                            width: 1.8,
-                                            height: 60,
-                                            displayValue: false,
-                                            background: '#fff',
-                                            lineColor: '#000',
+                                        const qrDataUrl = await QRCode.toDataURL(item.barcode_value, {
+                                            errorCorrectionLevel: 'M',
                                             margin: 0,
+                                            width: 220
                                         });
-                                        await new Promise(r => setTimeout(r, 20));
-                                        const img = await pdfDoc.embedPng(canvas.toDataURL('image/png'));
-                                        document.body.removeChild(canvas);
-
-                                        const bcAR = img.width / img.height;
-                                        const maxBcW = this.LABEL_W * 0.88;
-                                        let bcW = BC_HEIGHT * bcAR;
-                                        if (bcW > maxBcW) bcW = maxBcW;
-
-                                        const bcY = labelTopY - BC_TOP_OFFSET - BC_HEIGHT;
-                                        const bcX = labelX + (this.LABEL_W - bcW) / 2;
-                                        page.drawImage(img, { x: bcX, y: bcY, width: bcW, height: BC_HEIGHT });
+                                        const img = await pdfDoc.embedPng(qrDataUrl);
+                                        const qrY = labelTopY - BC_TOP_OFFSET - BC_SIZE;
+                                        const qrX = labelX + (this.LABEL_W - BC_SIZE) / 2;
+                                        page.drawImage(img, { x: qrX, y: qrY, width: BC_SIZE, height: BC_SIZE });
                                     }
 
                                     if (item.code_formate) {

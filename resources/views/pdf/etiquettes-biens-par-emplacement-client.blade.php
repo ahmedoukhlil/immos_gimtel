@@ -150,7 +150,7 @@
     </div>
 
     {{-- Bibliothèques JS --}}
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 
     <script>
@@ -228,7 +228,7 @@
 
                         const mm = this.MM;
                         const BC_TOP_OFFSET  = 3.5 * mm;
-                        const BC_HEIGHT      = 9.5 * mm;
+                        const BC_SIZE        = 9.5 * mm;
                         const CODE_Y_OFFSET  = 15.5 * mm;
                         const DESIG_Y_OFFSET = 19.0 * mm;
                         const FS_CODE = 7;
@@ -273,9 +273,9 @@
 
                                 if (this.includeEmplacementQr && slot === 0) {
                                     // ══════ PREMIÈRE ÉTIQUETTE : QR CODE EMPLACEMENT ══════
-                                    // Même layout que les barcodes : image en haut (zone 4mm→12mm),
+                                    // Même layout que les QR biens : image en haut,
                                     // texte 1 centré à 15.5mm, texte 2 centré à 19mm
-                                    const qrSize = BC_HEIGHT; // 9.5mm, même hauteur que les barcodes
+                                    const qrSize = BC_SIZE; // 9.5mm, même taille que les QR biens
                                     const qrX = labelX + (this.LABEL_W - qrSize) / 2;
                                     const qrY = labelTopY - BC_TOP_OFFSET - qrSize;
                                     page.drawImage(qrImg, { x: qrX, y: qrY, width: qrSize, height: qrSize });
@@ -317,26 +317,15 @@
                                 const desig = String(b.designation || '').trim();
                                 if (!val) continue;
 
-                                const canvas = document.createElement('canvas');
-                                canvas.style.cssText = 'position:absolute;left:-9999px';
-                                document.body.appendChild(canvas);
-                                JsBarcode(canvas, val, {
-                                    format: 'CODE128', width: 1.8, height: 60,
-                                    displayValue: false, background: '#fff',
-                                    lineColor: '#000', margin: 0
+                                const qrDataUrl = await QRCode.toDataURL(val, {
+                                    errorCorrectionLevel: 'M',
+                                    margin: 0,
+                                    width: 220
                                 });
-                                await new Promise(r => setTimeout(r, 30));
-                                const img = await pdfDoc.embedPng(canvas.toDataURL('image/png'));
-                                document.body.removeChild(canvas);
-
-                                const bcAR = img.width / img.height;
-                                const maxBcW = this.LABEL_W * 0.88;
-                                let bcW = BC_HEIGHT * bcAR;
-                                if (bcW > maxBcW) bcW = maxBcW;
-
-                                const bcY = labelTopY - BC_TOP_OFFSET - BC_HEIGHT;
-                                const bcX = labelX + (this.LABEL_W - bcW) / 2;
-                                page.drawImage(img, { x: bcX, y: bcY, width: bcW, height: BC_HEIGHT });
+                                const img = await pdfDoc.embedPng(qrDataUrl);
+                                const qrY = labelTopY - BC_TOP_OFFSET - BC_SIZE;
+                                const qrX = labelX + (this.LABEL_W - BC_SIZE) / 2;
+                                page.drawImage(img, { x: qrX, y: qrY, width: BC_SIZE, height: BC_SIZE });
 
                                 if (code) {
                                     const tw = font.widthOfTextAtSize(code, FS_CODE);
