@@ -17,7 +17,9 @@ const CONFIG = {
         qr: {
             width: 960,
             height: 540,
-            decodeIntervalMs: 120,
+            decodeIntervalMs: 80,
+            decodeWidth: 320,
+            decodeHeight: 240,
             detectCooldownMs: 1200
         },
         barcode: {
@@ -293,6 +295,7 @@ class ScannerManager {
         }
 
         const container = document.getElementById('scanner-container');
+        this.stopScanner();
         container.innerHTML = `
             <video id="qr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
         `;
@@ -313,13 +316,14 @@ class ScannerManager {
             const video = document.getElementById('qr-video');
             video.srcObject = stream;
 
-            // Attendre que la vidéo soit prête
-            video.addEventListener('loadedmetadata', () => {
-                console.log('[Scanner] Caméra prête:', video.videoWidth, 'x', video.videoHeight);
-                AppState.scannerActive = true;
-                HapticFeedback.light();
-                this.detectQRCode(video);
+            await new Promise(resolve => {
+                video.addEventListener('loadedmetadata', resolve, { once: true });
             });
+
+            console.log('[Scanner] Caméra prête:', video.videoWidth, 'x', video.videoHeight);
+            AppState.scannerActive = true;
+            HapticFeedback.light();
+            this.detectQRCode(video);
 
         } catch (error) {
             console.error('[Scanner] Erreur caméra:', error);
@@ -347,26 +351,33 @@ class ScannerManager {
             return;
         }
 
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+        this._ensureCanvas();
+        clearTimeout(this._loopTimer);
 
-        const scanFrame = () => {
+        const tick = () => {
             if (!AppState.scannerActive) return;
 
-            const now = Date.now();
-            if (now - AppState.qrLastDecodedAt < CONFIG.SCANNER.qr.decodeIntervalMs) {
-                requestAnimationFrame(scanFrame);
+            if (AppState.qrProcessing) {
+                this._loopTimer = setTimeout(tick, CONFIG.SCANNER.qr.decodeIntervalMs);
                 return;
             }
-            AppState.qrLastDecodedAt = now;
 
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                this._ctx.drawImage(
+                    video,
+                    0,
+                    0,
+                    CONFIG.SCANNER.qr.decodeWidth,
+                    CONFIG.SCANNER.qr.decodeHeight
+                );
 
                 try {
-                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const imageData = this._ctx.getImageData(
+                        0,
+                        0,
+                        CONFIG.SCANNER.qr.decodeWidth,
+                        CONFIG.SCANNER.qr.decodeHeight
+                    );
                     const code = jsQR(imageData.data, imageData.width, imageData.height, {
                         inversionAttempts: 'dontInvert',
                     });
@@ -381,10 +392,19 @@ class ScannerManager {
                 }
             }
 
-            requestAnimationFrame(scanFrame);
+            this._loopTimer = setTimeout(tick, CONFIG.SCANNER.qr.decodeIntervalMs);
         };
 
-        scanFrame();
+        tick();
+    }
+
+    static _ensureCanvas() {
+        if (!this._canvas || !this._ctx) {
+            this._canvas = document.createElement('canvas');
+            this._canvas.width = CONFIG.SCANNER.qr.decodeWidth;
+            this._canvas.height = CONFIG.SCANNER.qr.decodeHeight;
+            this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
+        }
     }
 
     static async handleQRCodeDetected(data) {
@@ -500,6 +520,8 @@ class ScannerManager {
 
     static stopScanner() {
         AppState.scannerActive = false;
+        clearTimeout(this._loopTimer);
+        this._loopTimer = null;
         const video = document.getElementById('qr-video');
         if (video && video.srcObject) {
             video.srcObject.getTracks().forEach(track => track.stop());
@@ -532,13 +554,15 @@ class BarcodeScannerManager {
             const video = document.getElementById('bien-qr-video');
             video.srcObject = stream;
 
-            video.addEventListener('loadedmetadata', () => {
-                console.log('[QR Biens] Caméra prête:', video.videoWidth, 'x', video.videoHeight);
-                AppState.barcodeScannerActive = true;
-                AppState.barcodeNativeLoopActive = true;
-                HapticFeedback.light();
-                this.startQrDetectionLoop(video);
+            await new Promise(resolve => {
+                video.addEventListener('loadedmetadata', resolve, { once: true });
             });
+
+            console.log('[QR Biens] Caméra prête:', video.videoWidth, 'x', video.videoHeight);
+            AppState.barcodeScannerActive = true;
+            AppState.barcodeNativeLoopActive = true;
+            HapticFeedback.light();
+            this.startQrDetectionLoop(video);
         } catch (error) {
             console.error('[QR Biens] Erreur caméra:', error);
             HapticFeedback.error();
@@ -554,37 +578,40 @@ class BarcodeScannerManager {
             return;
         }
 
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
+        this._ensureCanvas();
+        clearTimeout(this._loopTimer);
 
-        const loop = () => {
+        const tick = () => {
             if (!AppState.barcodeNativeLoopActive || !AppState.barcodeScannerActive) return;
 
-            const now = Date.now();
-            if (now - AppState.barcodeLastDecodedAt < CONFIG.SCANNER.qr.decodeIntervalMs) {
-                requestAnimationFrame(loop);
-                return;
-            }
-            AppState.barcodeLastDecodedAt = now;
-
             if (AppState.barcodeModalOpen || AppState.barcodeProcessing) {
-                requestAnimationFrame(loop);
+                this._loopTimer = setTimeout(tick, CONFIG.SCANNER.qr.decodeIntervalMs);
                 return;
             }
 
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                this._ctx.drawImage(
+                    video,
+                    0,
+                    0,
+                    CONFIG.SCANNER.qr.decodeWidth,
+                    CONFIG.SCANNER.qr.decodeHeight
+                );
 
                 try {
-                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const imageData = this._ctx.getImageData(
+                        0,
+                        0,
+                        CONFIG.SCANNER.qr.decodeWidth,
+                        CONFIG.SCANNER.qr.decodeHeight
+                    );
                     const code = jsQR(imageData.data, imageData.width, imageData.height, {
                         inversionAttempts: 'dontInvert',
                     });
 
                     if (code && code.data) {
                         const rawValue = String(code.data).trim();
+                        const now = Date.now();
                         if (
                             AppState.barcodeLastCode !== rawValue ||
                             (now - AppState.barcodeLastDetectedAt) >= CONFIG.SCANNER.barcode.detectCooldownMs
@@ -600,10 +627,19 @@ class BarcodeScannerManager {
                 }
             }
 
-            requestAnimationFrame(loop);
+            this._loopTimer = setTimeout(tick, CONFIG.SCANNER.qr.decodeIntervalMs);
         };
 
-        loop();
+        tick();
+    }
+
+    static _ensureCanvas() {
+        if (!this._canvas || !this._ctx) {
+            this._canvas = document.createElement('canvas');
+            this._canvas.width = CONFIG.SCANNER.qr.decodeWidth;
+            this._canvas.height = CONFIG.SCANNER.qr.decodeHeight;
+            this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
+        }
     }
 
     static async handleBarcodeDetected(codeBarre) {
@@ -663,6 +699,8 @@ class BarcodeScannerManager {
     static stopBarcodeScanner() {
         AppState.barcodeScannerActive = false;
         AppState.barcodeNativeLoopActive = false;
+        clearTimeout(this._loopTimer);
+        this._loopTimer = null;
         const video = document.getElementById('bien-qr-video');
         if (video && video.srcObject) {
             video.srcObject.getTracks().forEach(track => track.stop());
