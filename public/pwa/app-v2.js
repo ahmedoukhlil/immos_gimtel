@@ -87,7 +87,6 @@ const AppState = {
     biensScannés: [], // [{ num_ordre, etat_id, photo? }]
     etats: [], // [{ id, label, require_photo }] depuis API /etats
     scannerActive: false,
-    barcodeScanner: null,
     modalBienEnCours: null, // bien en attente de confirmation (num_ordre, designation)
     qrProcessing: false,
     qrLastDecodedAt: 0,
@@ -97,13 +96,13 @@ const AppState = {
     barcodeLastCode: null,
     barcodeModalOpen: false,
     barcodeScannerActive: false,
-    barcodeDetectorNative: null,
     barcodeNativeLoopActive: false,
     biensAttendusIndex: new Map(), // key: num_ordre
     biensScannesIndex: new Map(),  // key: num_ordre
     lastToastKey: null,
     lastToastAt: 0,
     barcodeLastInvalidAt: 0,
+    barcodeLastDecodedAt: 0, // throttle pour le scanner biens
 };
 
 // ===========================================
@@ -509,7 +508,7 @@ class ScannerManager {
 }
 
 // ===========================================
-// QR SCANNER BIENS - QR code (jsQR + BarcodeDetector)
+// QR SCANNER BIENS - QR code (jsQR uniquement)
 // ===========================================
 
 class BarcodeScannerManager {
@@ -522,9 +521,10 @@ class BarcodeScannerManager {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'environment',
-                    width: { min: 400, ideal: CONFIG.SCANNER.barcode.width },
-                    height: { min: 300, ideal: CONFIG.SCANNER.barcode.height },
-                    aspectRatio: { ideal: 4 / 3 }
+                    width: { ideal: CONFIG.SCANNER.qr.width, max: 1280 },
+                    height: { ideal: CONFIG.SCANNER.qr.height, max: 720 },
+                    aspectRatio: { ideal: 16 / 9 },
+                    frameRate: { ideal: 24, max: 30 }
                 },
                 audio: false
             });
@@ -533,6 +533,7 @@ class BarcodeScannerManager {
             video.srcObject = stream;
 
             video.addEventListener('loadedmetadata', () => {
+                console.log('[QR Biens] Caméra prête:', video.videoWidth, 'x', video.videoHeight);
                 AppState.barcodeScannerActive = true;
                 AppState.barcodeNativeLoopActive = true;
                 HapticFeedback.light();
@@ -546,72 +547,63 @@ class BarcodeScannerManager {
     }
 
     static startQrDetectionLoop(video) {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d', { willReadFrequently: true });
-        let nativeDetector = null;
-
-        if (typeof window.BarcodeDetector !== 'undefined') {
-            try {
-                nativeDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
-            } catch (_) {
-                nativeDetector = null;
-            }
+        if (typeof jsQR === 'undefined') {
+            console.error('[QR Biens] jsQR n\'est pas chargé');
+            HapticFeedback.error();
+            UI.showToast('❌ Erreur: Bibliothèque QR code non chargée', 'error');
+            return;
         }
 
-        const loop = async () => {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        const loop = () => {
             if (!AppState.barcodeNativeLoopActive || !AppState.barcodeScannerActive) return;
 
+            const now = Date.now();
+            if (now - AppState.barcodeLastDecodedAt < CONFIG.SCANNER.qr.decodeIntervalMs) {
+                requestAnimationFrame(loop);
+                return;
+            }
+            AppState.barcodeLastDecodedAt = now;
+
             if (AppState.barcodeModalOpen || AppState.barcodeProcessing) {
-                setTimeout(loop, 120);
+                requestAnimationFrame(loop);
                 return;
             }
 
-            let rawValue = null;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            try {
-                if (video.readyState >= 2) {
-                    if (nativeDetector) {
-                        const results = await nativeDetector.detect(video);
-                        if (results && results.length > 0) {
-                            rawValue = String(results[0].rawValue || '').trim();
+                try {
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: 'dontInvert',
+                    });
+
+                    if (code && code.data) {
+                        const rawValue = String(code.data).trim();
+                        if (
+                            AppState.barcodeLastCode !== rawValue ||
+                            (now - AppState.barcodeLastDetectedAt) >= CONFIG.SCANNER.barcode.detectCooldownMs
+                        ) {
+                            AppState.barcodeLastCode = rawValue;
+                            AppState.barcodeLastDetectedAt = now;
+                            this.handleBarcodeDetected(rawValue);
+                            return;
                         }
                     }
-
-                    if (!rawValue && typeof jsQR !== 'undefined') {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                        const qr = jsQR(imageData.data, imageData.width, imageData.height, {
-                            inversionAttempts: 'attemptBoth'
-                        });
-                        if (qr && qr.data) {
-                            rawValue = String(qr.data).trim();
-                        }
-                    }
-                }
-            } catch (_) {
-                // Ignore les erreurs sporadiques de décodage
-            }
-
-            if (rawValue) {
-                const now = Date.now();
-                if (
-                    !(
-                        AppState.barcodeLastCode === rawValue &&
-                        (now - AppState.barcodeLastDetectedAt) < CONFIG.SCANNER.barcode.detectCooldownMs
-                    )
-                ) {
-                    AppState.barcodeLastCode = rawValue;
-                    AppState.barcodeLastDetectedAt = now;
-                    this.handleBarcodeDetected(rawValue);
+                } catch (error) {
+                    console.error('[QR Biens] Erreur lors du scan:', error);
                 }
             }
 
-            setTimeout(loop, 120);
+            requestAnimationFrame(loop);
         };
 
-        setTimeout(loop, 200);
+        loop();
     }
 
     static async handleBarcodeDetected(codeBarre) {
@@ -671,7 +663,6 @@ class BarcodeScannerManager {
     static stopBarcodeScanner() {
         AppState.barcodeScannerActive = false;
         AppState.barcodeNativeLoopActive = false;
-        AppState.barcodeDetectorNative = null;
         const video = document.getElementById('bien-qr-video');
         if (video && video.srcObject) {
             video.srcObject.getTracks().forEach(track => track.stop());
