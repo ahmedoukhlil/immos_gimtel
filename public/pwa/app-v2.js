@@ -13,6 +13,9 @@ const CONFIG = {
     API_BASE_URL: window.location.origin + '/api/v1',
     STORAGE_KEY_TOKEN: 'inventaire_token_v2',
     STORAGE_KEY_USER: 'inventaire_user_v2',
+    SESSION: {
+        inactivityTimeoutMs: 2 * 60 * 60 * 1000 // 2h
+    },
     SCANNER: {
         qr: {
             width: 960,
@@ -104,6 +107,7 @@ const AppState = {
     lastToastKey: null,
     lastToastAt: 0,
     barcodeLastInvalidAt: 0,
+    lastActivityAt: 0,
 };
 
 // ===========================================
@@ -241,6 +245,7 @@ class AuthManager {
             HapticFeedback.success();
             UI.showView('scanner');
             UI.updateUserInfo();
+            SessionSecurityManager.start();
             UI.showToast('✅ Connexion réussie', 'success');
         } catch (error) {
             HapticFeedback.error();
@@ -248,15 +253,29 @@ class AuthManager {
         }
     }
 
-    static logout() {
+    static async logout(options = {}) {
+        const reason = options.reason || 'manual';
+        const showToast = options.showToast !== false;
+
+        SessionSecurityManager.stop();
+        ScannerManager.stopScanner();
+        BarcodeScannerManager.stopBarcodeScanner();
+
         AppState.token = null;
         AppState.user = null;
         localStorage.removeItem(CONFIG.STORAGE_KEY_TOKEN);
         localStorage.removeItem(CONFIG.STORAGE_KEY_USER);
+        await this.clearSensitiveClientData();
         
         HapticFeedback.medium();
         UI.showView('login');
-        UI.showToast('👋 Déconnexion', 'info');
+        if (showToast) {
+            if (reason === 'inactivity') {
+                UI.showToast('🔒 Déconnexion automatique après 2h d\'inactivité', 'warning');
+            } else {
+                UI.showToast('👋 Déconnexion', 'info');
+            }
+        }
     }
 
     static checkAuth() {
@@ -270,12 +289,146 @@ class AuthManager {
                 UI.loadEtats().then(() => {});
                 UI.showView('scanner');
                 UI.updateUserInfo();
+                SessionSecurityManager.start();
                 return true;
             } catch {
                 this.logout();
             }
         }
         return false;
+    }
+
+    static async clearSensitiveClientData() {
+        try {
+            localStorage.clear();
+        } catch (_) {}
+
+        try {
+            sessionStorage.clear();
+        } catch (_) {}
+
+        // Supprime les cookies accessibles en JavaScript (HttpOnly non accessibles côté client)
+        try {
+            const host = window.location.hostname;
+            const baseCookies = document.cookie ? document.cookie.split(';') : [];
+            baseCookies.forEach(raw => {
+                const cookieName = raw.split('=')[0].trim();
+                if (!cookieName) return;
+                const expires = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                document.cookie = `${cookieName}=; ${expires}; path=/`;
+                document.cookie = `${cookieName}=; ${expires}; path=/; domain=${host}`;
+                if (host.includes('.')) {
+                    document.cookie = `${cookieName}=; ${expires}; path=/; domain=.${host}`;
+                }
+            });
+        } catch (_) {}
+
+        // Supprime les caches de la PWA
+        try {
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+            }
+        } catch (_) {}
+
+        // Best effort: purge IndexedDB (si API disponible sur le navigateur)
+        try {
+            if (window.indexedDB && typeof window.indexedDB.databases === 'function') {
+                const dbs = await window.indexedDB.databases();
+                await Promise.all(
+                    (dbs || [])
+                        .filter(db => db && db.name)
+                        .map(db => new Promise(resolve => {
+                            const req = window.indexedDB.deleteDatabase(db.name);
+                            req.onsuccess = () => resolve();
+                            req.onerror = () => resolve();
+                            req.onblocked = () => resolve();
+                        }))
+                );
+            }
+        } catch (_) {}
+    }
+}
+
+// ===========================================
+// SESSION SECURITY MANAGER
+// ===========================================
+
+class SessionSecurityManager {
+    static _timer = null;
+    static _boundActivityHandler = null;
+    static _boundVisibilityHandler = null;
+    static _events = ['click', 'keydown', 'touchstart', 'pointerdown', 'scroll', 'mousemove'];
+
+    static start() {
+        if (!AppState.token) return;
+        this.stop();
+        AppState.lastActivityAt = Date.now();
+
+        this._boundActivityHandler = () => this.registerActivity();
+        this._boundVisibilityHandler = () => {
+            if (document.visibilityState === 'visible') {
+                this.checkNow();
+            }
+        };
+
+        this._events.forEach(evt => {
+            window.addEventListener(evt, this._boundActivityHandler, { passive: true });
+        });
+        document.addEventListener('visibilitychange', this._boundVisibilityHandler);
+
+        this.schedule();
+    }
+
+    static stop() {
+        clearTimeout(this._timer);
+        this._timer = null;
+
+        if (this._boundActivityHandler) {
+            this._events.forEach(evt => {
+                window.removeEventListener(evt, this._boundActivityHandler);
+            });
+        }
+        if (this._boundVisibilityHandler) {
+            document.removeEventListener('visibilitychange', this._boundVisibilityHandler);
+        }
+
+        this._boundActivityHandler = null;
+        this._boundVisibilityHandler = null;
+    }
+
+    static registerActivity() {
+        if (!AppState.token) return;
+        AppState.lastActivityAt = Date.now();
+        this.schedule();
+    }
+
+    static schedule() {
+        clearTimeout(this._timer);
+        if (!AppState.token) return;
+
+        const elapsed = Date.now() - (AppState.lastActivityAt || 0);
+        const remaining = CONFIG.SESSION.inactivityTimeoutMs - elapsed;
+        if (remaining <= 0) {
+            this.handleInactivityTimeout();
+            return;
+        }
+
+        this._timer = setTimeout(() => this.checkNow(), remaining);
+    }
+
+    static checkNow() {
+        if (!AppState.token) return;
+        const elapsed = Date.now() - (AppState.lastActivityAt || 0);
+        if (elapsed >= CONFIG.SESSION.inactivityTimeoutMs) {
+            this.handleInactivityTimeout();
+            return;
+        }
+        this.schedule();
+    }
+
+    static handleInactivityTimeout() {
+        AuthManager.logout({ reason: 'inactivity', showToast: true });
     }
 }
 
