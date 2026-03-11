@@ -104,7 +104,6 @@ const AppState = {
     lastToastKey: null,
     lastToastAt: 0,
     barcodeLastInvalidAt: 0,
-    barcodeLastDecodedAt: 0, // throttle pour le scanner biens
 };
 
 // ===========================================
@@ -553,6 +552,7 @@ class BarcodeScannerManager {
 
             const video = document.getElementById('bien-qr-video');
             video.srcObject = stream;
+            this._enableTorch(stream);
 
             await new Promise(resolve => {
                 video.addEventListener('loadedmetadata', resolve, { once: true });
@@ -578,6 +578,7 @@ class BarcodeScannerManager {
             return;
         }
 
+        this._setupNativeDetector();
         this._ensureCanvas();
         clearTimeout(this._loopTimer);
 
@@ -590,20 +591,30 @@ class BarcodeScannerManager {
             }
 
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                this._ctx.drawImage(
-                    video,
-                    0,
-                    0,
-                    CONFIG.SCANNER.qr.decodeWidth,
-                    CONFIG.SCANNER.qr.decodeHeight
-                );
+                this._drawDecodeFrame(video);
+
+                if (this._nativeDetector && !this._nativeDetectPending) {
+                    this._nativeDetectPending = true;
+                    this._nativeDetector.detect(video)
+                        .then(results => {
+                            if (!results || results.length === 0) return;
+                            const raw = String(results[0].rawValue || '').trim();
+                            this.consumeDetectedValue(raw);
+                        })
+                        .catch(() => {
+                            // Ignorer les erreurs sporadiques du decodeur natif
+                        })
+                        .finally(() => {
+                            this._nativeDetectPending = false;
+                        });
+                }
 
                 try {
                     const imageData = this._ctx.getImageData(
                         0,
                         0,
-                        CONFIG.SCANNER.qr.decodeWidth,
-                        CONFIG.SCANNER.qr.decodeHeight
+                        this._canvas.width,
+                        this._canvas.height
                     );
                     const code = jsQR(imageData.data, imageData.width, imageData.height, {
                         inversionAttempts: 'dontInvert',
@@ -611,14 +622,8 @@ class BarcodeScannerManager {
 
                     if (code && code.data) {
                         const rawValue = String(code.data).trim();
-                        const now = Date.now();
-                        if (
-                            AppState.barcodeLastCode !== rawValue ||
-                            (now - AppState.barcodeLastDetectedAt) >= CONFIG.SCANNER.barcode.detectCooldownMs
-                        ) {
-                            AppState.barcodeLastCode = rawValue;
-                            AppState.barcodeLastDetectedAt = now;
-                            this.handleBarcodeDetected(rawValue);
+                        if (this.consumeDetectedValue(rawValue)) {
+                            this._loopTimer = setTimeout(tick, CONFIG.SCANNER.qr.decodeIntervalMs);
                             return;
                         }
                     }
@@ -633,12 +638,64 @@ class BarcodeScannerManager {
         tick();
     }
 
+    static consumeDetectedValue(rawValue) {
+        if (!rawValue || AppState.barcodeModalOpen || AppState.barcodeProcessing) return false;
+        const now = Date.now();
+        if (
+            AppState.barcodeLastCode === rawValue &&
+            (now - AppState.barcodeLastDetectedAt) < CONFIG.SCANNER.barcode.detectCooldownMs
+        ) {
+            return false;
+        }
+        AppState.barcodeLastCode = rawValue;
+        AppState.barcodeLastDetectedAt = now;
+        this.handleBarcodeDetected(rawValue);
+        return true;
+    }
+
     static _ensureCanvas() {
         if (!this._canvas || !this._ctx) {
             this._canvas = document.createElement('canvas');
-            this._canvas.width = CONFIG.SCANNER.qr.decodeWidth;
-            this._canvas.height = CONFIG.SCANNER.qr.decodeHeight;
+            this._canvas.width = 480;
+            this._canvas.height = 360;
             this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
+        }
+    }
+
+    static _drawDecodeFrame(video) {
+        const srcW = video.videoWidth || 0;
+        const srcH = video.videoHeight || 0;
+        if (srcW <= 0 || srcH <= 0) return;
+
+        const cropRatio = 0.6; // Crop central pour augmenter la taille apparente du QR dans l'image décodée
+        const sw = srcW * cropRatio;
+        const sh = srcH * cropRatio;
+        const sx = (srcW - sw) / 2;
+        const sy = (srcH - sh) / 2;
+
+        this._ctx.drawImage(video, sx, sy, sw, sh, 0, 0, this._canvas.width, this._canvas.height);
+    }
+
+    static _setupNativeDetector() {
+        this._nativeDetector = null;
+        this._nativeDetectPending = false;
+        if (typeof window.BarcodeDetector === 'undefined') return;
+        try {
+            this._nativeDetector = new window.BarcodeDetector({ formats: ['qr_code'] });
+        } catch (_) {
+            this._nativeDetector = null;
+        }
+    }
+
+    static _enableTorch(stream) {
+        try {
+            const [track] = stream.getVideoTracks();
+            if (!track || typeof track.getCapabilities !== 'function') return;
+            const caps = track.getCapabilities();
+            if (!caps || !caps.torch) return;
+            track.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
+        } catch (_) {
+            // Best effort: certains navigateurs ne supportent pas torch
         }
     }
 
@@ -701,6 +758,8 @@ class BarcodeScannerManager {
         AppState.barcodeNativeLoopActive = false;
         clearTimeout(this._loopTimer);
         this._loopTimer = null;
+        this._nativeDetector = null;
+        this._nativeDetectPending = false;
         const video = document.getElementById('bien-qr-video');
         if (video && video.srcObject) {
             video.srcObject.getTracks().forEach(track => track.stop());
