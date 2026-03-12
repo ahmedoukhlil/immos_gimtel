@@ -21,8 +21,8 @@ const CONFIG = {
             width: 960,
             height: 540,
             decodeIntervalMs: 80,
-            decodeWidth: 320,
-            decodeHeight: 240,
+            decodeWidth: 400,
+            decodeHeight: 300,
             detectCooldownMs: 1200
         },
         barcode: {
@@ -110,6 +110,8 @@ const AppState = {
     barcodeLastInvalidAt: 0,
     lastActivityAt: 0,
     emplacementInputMode: 'scan', // 'scan' | 'manual'
+    empTorchEnabled: false,
+    bienTorchEnabled: false,
 };
 
 // ===========================================
@@ -499,6 +501,9 @@ class ScannerManager {
         this.stopScanner();
         container.innerHTML = `
             <video id="qr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+            <button id="emp-torch-toggle" class="hidden absolute top-2 right-2 z-20 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/60 text-white backdrop-blur-sm">
+                🔦 Torche off
+            </button>
             <div class="scan-overlay">
                 <div class="scan-reticle">
                     <span class="scan-corner tl"></span>
@@ -525,6 +530,8 @@ class ScannerManager {
 
             const video = document.getElementById('qr-video');
             video.srcObject = stream;
+            this._videoTrack = stream.getVideoTracks()[0] || null;
+            this._setupTorchToggle();
 
             await new Promise(resolve => {
                 video.addEventListener('loadedmetadata', resolve, { once: true });
@@ -588,7 +595,23 @@ class ScannerManager {
                         CONFIG.SCANNER.qr.decodeWidth,
                         CONFIG.SCANNER.qr.decodeHeight
                     );
-                    const decodedText = QRDecoder.decodeImageData(imageData);
+                    let decodedText = QRDecoder.decodeImageData(imageData);
+                    if (!decodedText) {
+                        // 2e passe: crop central pour mieux lire les petits QR centrés
+                        const cropRatio = 0.65;
+                        const sw = (video.videoWidth || 0) * cropRatio;
+                        const sh = (video.videoHeight || 0) * cropRatio;
+                        const sx = ((video.videoWidth || 0) - sw) / 2;
+                        const sy = ((video.videoHeight || 0) - sh) / 2;
+                        this._ctx.drawImage(video, sx, sy, sw, sh, 0, 0, CONFIG.SCANNER.qr.decodeWidth, CONFIG.SCANNER.qr.decodeHeight);
+                        const centerData = this._ctx.getImageData(
+                            0,
+                            0,
+                            CONFIG.SCANNER.qr.decodeWidth,
+                            CONFIG.SCANNER.qr.decodeHeight
+                        );
+                        decodedText = QRDecoder.decodeImageData(centerData);
+                    }
                     if (decodedText) {
                         console.log('[Scanner] QR Code détecté:', decodedText);
                         this.handleQRCodeDetected(decodedText);
@@ -614,6 +637,49 @@ class ScannerManager {
             this._canvas.height = CONFIG.SCANNER.qr.decodeHeight;
             this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
         }
+    }
+
+    static _setupTorchToggle() {
+        const btn = document.getElementById('emp-torch-toggle');
+        const track = this._videoTrack;
+        AppState.empTorchEnabled = false;
+
+        if (!btn || !track || typeof track.getCapabilities !== 'function') {
+            if (btn) btn.classList.add('hidden');
+            return;
+        }
+
+        const caps = track.getCapabilities();
+        if (!caps || !caps.torch) {
+            btn.classList.add('hidden');
+            return;
+        }
+
+        btn.classList.remove('hidden');
+        this._updateTorchButton(btn, false);
+        btn.onclick = () => this._toggleTorch(btn);
+    }
+
+    static async _toggleTorch(btn) {
+        const track = this._videoTrack;
+        if (!track) return;
+
+        const next = !AppState.empTorchEnabled;
+        try {
+            await track.applyConstraints({ advanced: [{ torch: next }] });
+            AppState.empTorchEnabled = next;
+            this._updateTorchButton(btn, next);
+        } catch (_) {
+            AppState.empTorchEnabled = false;
+            this._updateTorchButton(btn, false);
+            UI.showToast('⚠️ Torche non supportée sur cet appareil', 'warning');
+        }
+    }
+
+    static _updateTorchButton(btn, enabled) {
+        btn.textContent = enabled ? '🔦 Torche on' : '🔦 Torche off';
+        btn.classList.toggle('bg-emerald-600/90', enabled);
+        btn.classList.toggle('bg-black/60', !enabled);
     }
 
     static async handleQRCodeDetected(data) {
@@ -730,6 +796,8 @@ class ScannerManager {
         AppState.scannerActive = false;
         clearTimeout(this._loopTimer);
         this._loopTimer = null;
+        AppState.empTorchEnabled = false;
+        this._videoTrack = null;
         const video = document.getElementById('qr-video');
         if (video && video.srcObject) {
             video.srcObject.getTracks().forEach(track => track.stop());
@@ -747,6 +815,9 @@ class BarcodeScannerManager {
         this.stopBarcodeScanner();
         container.innerHTML = `
             <video id="bien-qr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+            <button id="bien-torch-toggle" class="hidden absolute top-2 right-2 z-20 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/60 text-white backdrop-blur-sm">
+                🔦 Torche off
+            </button>
             <div class="scan-overlay">
                 <div class="scan-reticle">
                     <span class="scan-corner tl"></span>
@@ -772,7 +843,8 @@ class BarcodeScannerManager {
 
             const video = document.getElementById('bien-qr-video');
             video.srcObject = stream;
-            this._enableTorch(stream);
+            this._videoTrack = stream.getVideoTracks()[0] || null;
+            this._setupTorchToggle();
 
             await new Promise(resolve => {
                 video.addEventListener('loadedmetadata', resolve, { once: true });
@@ -906,16 +978,47 @@ class BarcodeScannerManager {
         }
     }
 
-    static _enableTorch(stream) {
-        try {
-            const [track] = stream.getVideoTracks();
-            if (!track || typeof track.getCapabilities !== 'function') return;
-            const caps = track.getCapabilities();
-            if (!caps || !caps.torch) return;
-            track.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
-        } catch (_) {
-            // Best effort: certains navigateurs ne supportent pas torch
+    static _setupTorchToggle() {
+        const btn = document.getElementById('bien-torch-toggle');
+        const track = this._videoTrack;
+        AppState.bienTorchEnabled = false;
+
+        if (!btn || !track || typeof track.getCapabilities !== 'function') {
+            if (btn) btn.classList.add('hidden');
+            return;
         }
+
+        const caps = track.getCapabilities();
+        if (!caps || !caps.torch) {
+            btn.classList.add('hidden');
+            return;
+        }
+
+        btn.classList.remove('hidden');
+        this._updateTorchButton(btn, false);
+        btn.onclick = () => this._toggleTorch(btn);
+    }
+
+    static async _toggleTorch(btn) {
+        const track = this._videoTrack;
+        if (!track) return;
+
+        const next = !AppState.bienTorchEnabled;
+        try {
+            await track.applyConstraints({ advanced: [{ torch: next }] });
+            AppState.bienTorchEnabled = next;
+            this._updateTorchButton(btn, next);
+        } catch (_) {
+            AppState.bienTorchEnabled = false;
+            this._updateTorchButton(btn, false);
+            UI.showToast('⚠️ Torche non supportée sur cet appareil', 'warning');
+        }
+    }
+
+    static _updateTorchButton(btn, enabled) {
+        btn.textContent = enabled ? '🔦 Torche on' : '🔦 Torche off';
+        btn.classList.toggle('bg-emerald-600/90', enabled);
+        btn.classList.toggle('bg-black/60', !enabled);
     }
 
     static async handleBarcodeDetected(codeBarre) {
@@ -979,6 +1082,8 @@ class BarcodeScannerManager {
         this._loopTimer = null;
         this._nativeDetector = null;
         this._nativeDetectPending = false;
+        AppState.bienTorchEnabled = false;
+        this._videoTrack = null;
         const video = document.getElementById('bien-qr-video');
         if (video && video.srcObject) {
             video.srcObject.getTracks().forEach(track => track.stop());

@@ -208,7 +208,7 @@
 
                 setStatus(type, text) { this.statusType = type; this.statusText = text; },
 
-                async dataUriToEmbeddedPng(pdfDoc, dataUri, size = 300) {
+                async dataUriToEmbeddedPng(pdfDoc, dataUri, size = 360) {
                     return await new Promise((resolve, reject) => {
                         const img = new Image();
                         img.onload = async () => {
@@ -249,10 +249,11 @@
                         const totalPages = Math.ceil(totalSlots / this.TOTAL);
 
                         const mm = this.MM;
-                        const BC_TOP_OFFSET  = 3.5 * mm;
-                        const BC_SIZE        = 9.5 * mm;
-                        const CODE_Y_OFFSET  = 15.5 * mm;
-                        const DESIG_Y_OFFSET = 19.0 * mm;
+                        // QR agrandi tout en conservant l'étiquette 70mm x 24.4mm
+                        const BC_TOP_OFFSET  = 2.5 * mm;
+                        const BC_SIZE        = 11.0 * mm;
+                        const CODE_Y_OFFSET  = 16.5 * mm;
+                        const DESIG_Y_OFFSET = 20.0 * mm;
                         const FS_CODE = 7;
                         const FS_DESIG = 5;
 
@@ -265,11 +266,11 @@
                                 const img = new Image();
                                 img.onload = async () => {
                                     const c = document.createElement('canvas');
-                                    c.width = 300; c.height = 300;
+                                    c.width = 360; c.height = 360;
                                     const ctx = c.getContext('2d');
                                     ctx.fillStyle = '#fff';
                                     ctx.fillRect(0, 0, 300, 300);
-                                    ctx.drawImage(img, 0, 0, 300, 300);
+                                    ctx.drawImage(img, 0, 0, 360, 360);
                                     try {
                                         const embedded = await pdfDoc.embedPng(c.toDataURL('image/png'));
                                         resolve(embedded);
@@ -340,7 +341,7 @@
                                 if (!val) continue;
 
                                 if (b.qr_data_uri) {
-                                    const img = await this.dataUriToEmbeddedPng(pdfDoc, String(b.qr_data_uri), 220);
+                                    const img = await this.dataUriToEmbeddedPng(pdfDoc, String(b.qr_data_uri), 320);
                                     const qrY = labelTopY - BC_TOP_OFFSET - BC_SIZE;
                                     const qrX = labelX + (this.LABEL_W - BC_SIZE) / 2;
                                     page.drawImage(img, { x: qrX, y: qrY, width: BC_SIZE, height: BC_SIZE });
