@@ -221,9 +221,15 @@ class QRDecoder {
         if (!ZXing) {
             throw new Error('ZXing non chargé');
         }
-        const rgbData = this.rgbaToRgb(imageData);
+        // RGBLuminanceSource attend ici un Int32Array (pixels ARGB) ou une matrice de luminance.
+        // getImageData() renvoie du RGBA; on l'expose en Int32Array pour que ZXing calcule la luminance correctement.
+        const rgbaAsInt32 = new Int32Array(
+            imageData.data.buffer,
+            imageData.data.byteOffset,
+            imageData.data.byteLength / 4
+        );
         const luminanceSource = new ZXing.RGBLuminanceSource(
-            rgbData,
+            rgbaAsInt32,
             imageData.width,
             imageData.height
         );
