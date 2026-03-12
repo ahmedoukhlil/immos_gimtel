@@ -89,17 +89,27 @@
                 LABEL_W_MM: 70,
                 LABEL_H_MM: 24.4,
                 COLS: 3,
+                MARGIN_LEFT_MM: 0,
+                MARGIN_RIGHT_MM: 0,
                 MARGIN_TOP_MM: 7,
                 MARGIN_BOTTOM_MM: 7,
 
                 get LABEL_W() { return this.LABEL_W_MM * this.MM; },
                 get LABEL_H() { return this.LABEL_H_MM * this.MM; },
-                get MARGIN_LEFT() { return (this.A4_W - this.COLS * this.LABEL_W) / 2; },
+                get MARGIN_LEFT() { return this.MARGIN_LEFT_MM * this.MM; },
+                get MARGIN_RIGHT() { return this.MARGIN_RIGHT_MM * this.MM; },
                 get MARGIN_TOP() { return this.MARGIN_TOP_MM * this.MM; },
                 get MARGIN_BOTTOM() { return this.MARGIN_BOTTOM_MM * this.MM; },
+                get AVAILABLE_W() { return this.A4_W - this.MARGIN_LEFT - this.MARGIN_RIGHT; },
                 get AVAILABLE_H() { return this.A4_H - this.MARGIN_TOP - this.MARGIN_BOTTOM; },
                 get ROWS() { return Math.floor(this.AVAILABLE_H / this.LABEL_H); },
                 get TOTAL() { return this.COLS * this.ROWS; },
+                get COL_GAP() {
+                    const usedW = this.COLS * this.LABEL_W;
+                    const remaining = this.AVAILABLE_W - usedW;
+                    return this.COLS > 1 ? remaining / (this.COLS - 1) : 0;
+                },
+                get COL_PITCH() { return this.LABEL_W + this.COL_GAP; },
                 get ROW_GAP() {
                     const usedH = this.ROWS * this.LABEL_H;
                     const remaining = this.AVAILABLE_H - usedH;
@@ -176,6 +186,10 @@
                         const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
                         const mm = this.MM;
+                        const usedWidth = this.COLS * this.LABEL_W;
+                        if (usedWidth > this.AVAILABLE_W + 0.01) {
+                            throw new Error('Largeur insuffisante: ajustez les marges gauche/droite ou la largeur des étiquettes.');
+                        }
                         // Layout horizontal: QR à gauche, texte à droite
                         const INNER_PAD = 1.5 * mm;
                         const QR_TEXT_GAP = 2.0 * mm;
@@ -199,7 +213,7 @@
                                 const col = posOnPage % this.COLS;
                                 const row = Math.floor(posOnPage / this.COLS);
 
-                                const labelX = this.MARGIN_LEFT + col * this.LABEL_W;
+                                const labelX = this.MARGIN_LEFT + col * this.COL_PITCH;
                                 const labelTopY = this.A4_H - this.MARGIN_TOP - row * this.ROW_PITCH;
 
                                 if (item.type === 'qr') {
