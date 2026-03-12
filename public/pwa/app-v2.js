@@ -165,6 +165,49 @@ function rebuildBiensIndexes() {
 }
 
 // ===========================================
+// ZXING QR DECODER
+// ===========================================
+
+class QRDecoder {
+    static getReader() {
+        if (!this._reader) {
+            if (typeof window.ZXing === 'undefined') {
+                throw new Error('ZXing non chargé');
+            }
+            const hints = new Map();
+            hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, [window.ZXing.BarcodeFormat.QR_CODE]);
+            this._reader = new window.ZXing.MultiFormatReader();
+            this._reader.setHints(hints);
+        }
+        return this._reader;
+    }
+
+    static decodeImageData(imageData) {
+        const reader = this.getReader();
+        const luminanceSource = new window.ZXing.RGBLuminanceSource(
+            imageData.data,
+            imageData.width,
+            imageData.height
+        );
+        const binaryBitmap = new window.ZXing.BinaryBitmap(
+            new window.ZXing.HybridBinarizer(luminanceSource)
+        );
+        const result = reader.decode(binaryBitmap);
+        return result && result.getText ? result.getText() : null;
+    }
+
+    static isNotFoundError(error) {
+        const name = String(error?.name || '');
+        const message = String(error?.message || '');
+        return (
+            name.includes('NotFound') ||
+            message.includes('NotFoundException') ||
+            message.includes('No MultiFormat Readers were able to detect the code')
+        );
+    }
+}
+
+// ===========================================
 // API HELPER
 // ===========================================
 
@@ -438,9 +481,9 @@ class SessionSecurityManager {
 
 class ScannerManager {
     static async startQRScanner() {
-        // Vérifier que jsQR est disponible
-        if (typeof jsQR === 'undefined') {
-            console.error('[Scanner] jsQR n\'est pas chargé');
+        // Vérifier que ZXing est disponible
+        if (typeof window.ZXing === 'undefined') {
+            console.error('[Scanner] ZXing n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée. Rechargez la page.', 'error');
             return;
@@ -495,9 +538,9 @@ class ScannerManager {
     }
 
     static detectQRCode(video) {
-        // Vérifier que jsQR est disponible
-        if (typeof jsQR === 'undefined') {
-            console.error('[Scanner] jsQR n\'est pas chargé');
+        // Vérifier que ZXing est disponible
+        if (typeof window.ZXing === 'undefined') {
+            console.error('[Scanner] ZXing n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée', 'error');
             return;
@@ -530,17 +573,16 @@ class ScannerManager {
                         CONFIG.SCANNER.qr.decodeWidth,
                         CONFIG.SCANNER.qr.decodeHeight
                     );
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: 'dontInvert',
-                    });
-
-                    if (code && code.data) {
-                        console.log('[Scanner] QR Code détecté:', code.data);
-                        this.handleQRCodeDetected(code.data);
+                    const decodedText = QRDecoder.decodeImageData(imageData);
+                    if (decodedText) {
+                        console.log('[Scanner] QR Code détecté:', decodedText);
+                        this.handleQRCodeDetected(decodedText);
                         return;
                     }
                 } catch (error) {
-                    console.error('[Scanner] Erreur lors du scan:', error);
+                    if (!QRDecoder.isNotFoundError(error)) {
+                        console.error('[Scanner] Erreur lors du scan:', error);
+                    }
                 }
             }
 
@@ -682,7 +724,7 @@ class ScannerManager {
 }
 
 // ===========================================
-// QR SCANNER BIENS - QR code (jsQR uniquement)
+// QR SCANNER BIENS - QR code (ZXing + BarcodeDetector)
 // ===========================================
 
 class BarcodeScannerManager {
@@ -724,8 +766,8 @@ class BarcodeScannerManager {
     }
 
     static startQrDetectionLoop(video) {
-        if (typeof jsQR === 'undefined') {
-            console.error('[QR Biens] jsQR n\'est pas chargé');
+        if (typeof window.ZXing === 'undefined') {
+            console.error('[QR Biens] ZXing n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée', 'error');
             return;
@@ -769,19 +811,18 @@ class BarcodeScannerManager {
                         this._canvas.width,
                         this._canvas.height
                     );
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: 'dontInvert',
-                    });
-
-                    if (code && code.data) {
-                        const rawValue = String(code.data).trim();
+                    const decodedText = QRDecoder.decodeImageData(imageData);
+                    if (decodedText) {
+                        const rawValue = String(decodedText).trim();
                         if (this.consumeDetectedValue(rawValue)) {
                             this._loopTimer = setTimeout(tick, CONFIG.SCANNER.qr.decodeIntervalMs);
                             return;
                         }
                     }
                 } catch (error) {
-                    console.error('[QR Biens] Erreur lors du scan:', error);
+                    if (!QRDecoder.isNotFoundError(error)) {
+                        console.error('[QR Biens] Erreur lors du scan:', error);
+                    }
                 }
             }
 
