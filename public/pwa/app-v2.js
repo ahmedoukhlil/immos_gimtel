@@ -173,28 +173,62 @@ function rebuildBiensIndexes() {
 // ===========================================
 
 class QRDecoder {
+    static getZXingNamespace() {
+        const candidates = [window.ZXing, window.ZXingJs, window.ZXingBrowser];
+        return candidates.find(ns =>
+            ns &&
+            ns.MultiFormatReader &&
+            ns.DecodeHintType &&
+            ns.BarcodeFormat &&
+            ns.RGBLuminanceSource &&
+            ns.BinaryBitmap &&
+            ns.HybridBinarizer
+        ) || null;
+    }
+
+    static hasZXing() {
+        return !!this.getZXingNamespace();
+    }
+
     static getReader() {
-        if (!this._reader) {
-            if (typeof window.ZXing === 'undefined') {
-                throw new Error('ZXing non chargé');
-            }
-            const hints = new Map();
-            hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, [window.ZXing.BarcodeFormat.QR_CODE]);
-            this._reader = new window.ZXing.MultiFormatReader();
-            this._reader.setHints(hints);
+        const ZXing = this.getZXingNamespace();
+        if (!ZXing) {
+            throw new Error('ZXing non chargé');
         }
-        return this._reader;
+        // Nouveau reader à chaque appel pour éviter tout état corrompu persistant
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        const reader = new ZXing.MultiFormatReader();
+        reader.setHints(hints);
+        return reader;
+    }
+
+    static rgbaToRgb(imageData) {
+        const src = imageData.data;
+        const rgb = new Uint8ClampedArray((src.length / 4) * 3);
+        for (let i = 0, j = 0; i < src.length; i += 4, j += 3) {
+            rgb[j] = src[i];
+            rgb[j + 1] = src[i + 1];
+            rgb[j + 2] = src[i + 2];
+        }
+        return rgb;
     }
 
     static decodeImageData(imageData) {
         const reader = this.getReader();
-        const luminanceSource = new window.ZXing.RGBLuminanceSource(
-            imageData.data,
+        const ZXing = this.getZXingNamespace();
+        if (!ZXing) {
+            throw new Error('ZXing non chargé');
+        }
+        const rgbData = this.rgbaToRgb(imageData);
+        const luminanceSource = new ZXing.RGBLuminanceSource(
+            rgbData,
             imageData.width,
             imageData.height
         );
-        const binaryBitmap = new window.ZXing.BinaryBitmap(
-            new window.ZXing.HybridBinarizer(luminanceSource)
+        const binaryBitmap = new ZXing.BinaryBitmap(
+            new ZXing.HybridBinarizer(luminanceSource)
         );
         const result = reader.decode(binaryBitmap);
         return result && result.getText ? result.getText() : null;
@@ -490,7 +524,7 @@ class ScannerManager {
         }
 
         // Vérifier que ZXing est disponible
-        if (typeof window.ZXing === 'undefined') {
+        if (!QRDecoder.hasZXing()) {
             console.error('[Scanner] ZXing n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée. Rechargez la page.', 'error');
@@ -561,7 +595,7 @@ class ScannerManager {
 
     static detectQRCode(video) {
         // Vérifier que ZXing est disponible
-        if (typeof window.ZXing === 'undefined') {
+        if (!QRDecoder.hasZXing()) {
             console.error('[Scanner] ZXing n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée', 'error');
@@ -863,7 +897,7 @@ class BarcodeScannerManager {
     }
 
     static startQrDetectionLoop(video) {
-        if (typeof window.ZXing === 'undefined') {
+        if (!QRDecoder.hasZXing()) {
             console.error('[QR Biens] ZXing n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée', 'error');
@@ -887,7 +921,8 @@ class BarcodeScannerManager {
 
                 if (this._nativeDetector && !this._nativeDetectPending) {
                     this._nativeDetectPending = true;
-                    this._nativeDetector.detect(video)
+                    // Utiliser la même zone décodée que ZXing (canvas croppé)
+                    this._nativeDetector.detect(this._canvas)
                         .then(results => {
                             if (!results || results.length === 0) return;
                             const raw = String(results[0].rawValue || '').trim();
