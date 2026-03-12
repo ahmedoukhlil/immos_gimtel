@@ -67,11 +67,90 @@
         }
         
         /* Scanner container optimisé pour mobile */
-        #scanner-container video,
-        #barcode-scanner-container video {
+        #scanner-container video {
             width: 100% !important;
             height: auto !important;
             object-fit: cover;
+        }
+
+        #barcode-scanner-container video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+        }
+
+        .scan-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(
+                to bottom,
+                rgba(0, 0, 0, 0.22),
+                rgba(0, 0, 0, 0.1) 20%,
+                rgba(0, 0, 0, 0.1) 80%,
+                rgba(0, 0, 0, 0.22)
+            );
+        }
+
+        .scan-reticle {
+            position: relative;
+            width: 68%;
+            aspect-ratio: 1 / 1;
+            max-width: 240px;
+            border: 2px solid rgba(255, 255, 255, 0.65);
+            border-radius: 1rem;
+            box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.18);
+            background: transparent;
+        }
+
+        .scan-reticle::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            background: rgba(16, 185, 129, 0.9);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.9);
+            transform: translateY(-50%);
+            animation: scan-line 2.2s ease-in-out infinite;
+        }
+
+        @keyframes scan-line {
+            0% { transform: translateY(-48%); opacity: 0.7; }
+            50% { transform: translateY(48%); opacity: 1; }
+            100% { transform: translateY(-48%); opacity: 0.7; }
+        }
+
+        .scan-corner {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-color: #10b981;
+            border-style: solid;
+            border-width: 0;
+        }
+
+        .scan-corner.tl { top: -2px; left: -2px; border-top-width: 4px; border-left-width: 4px; border-top-left-radius: 0.75rem; }
+        .scan-corner.tr { top: -2px; right: -2px; border-top-width: 4px; border-right-width: 4px; border-top-right-radius: 0.75rem; }
+        .scan-corner.bl { bottom: -2px; left: -2px; border-bottom-width: 4px; border-left-width: 4px; border-bottom-left-radius: 0.75rem; }
+        .scan-corner.br { bottom: -2px; right: -2px; border-bottom-width: 4px; border-right-width: 4px; border-bottom-right-radius: 0.75rem; }
+
+        .scan-overlay-hint {
+            position: absolute;
+            bottom: 0.6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.72rem;
+            line-height: 1rem;
+            color: rgba(255, 255, 255, 0.92);
+            background: rgba(0, 0, 0, 0.35);
+            padding: 0.2rem 0.55rem;
+            border-radius: 9999px;
+            white-space: nowrap;
         }
         
         /* Prévenir le pull-to-refresh sur certaines zones */
@@ -237,14 +316,58 @@
                     </div>
                 </div>
 
-                <!-- Instruction -->
-                <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded mb-4">
-                    <p class="text-sm text-green-800 font-medium">📦 Scannez les QR codes des étiquettes des biens</p>
+                <!-- Onglets: Scan / Saisie manuelle -->
+                <div class="bg-white rounded-xl shadow-sm mb-4 overflow-hidden border border-gray-100">
+                    <div class="grid grid-cols-2">
+                        <button id="tab-bien-scan" class="touch-target touch-feedback px-4 py-3 text-sm font-semibold bg-indigo-600 text-white">
+                            Scanner QR
+                        </button>
+                        <button id="tab-bien-manual" class="touch-target touch-feedback px-4 py-3 text-sm font-semibold bg-white text-gray-700 border-l border-gray-100">
+                            Saisie N° ordre
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Scanner QR Biens optimisé mobile -->
-                <div class="bg-black rounded-xl overflow-hidden mb-4 shadow-lg">
-                    <div id="barcode-scanner-container" class="w-full relative" style="min-height: 250px; max-height: 50vh;"></div>
+                <!-- Mode Scan -->
+                <div id="bien-mode-scan" class="mb-4">
+                    <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded mb-4">
+                        <p class="text-sm text-green-800 font-medium">📦 Scannez les QR codes des étiquettes des biens</p>
+                    </div>
+
+                    <div class="bg-black rounded-2xl overflow-hidden mb-4 shadow-lg mx-auto w-full max-w-[360px] aspect-square">
+                        <div id="barcode-scanner-container" class="w-full h-full relative">
+                            <div class="scan-overlay">
+                                <div class="scan-reticle">
+                                    <span class="scan-corner tl"></span>
+                                    <span class="scan-corner tr"></span>
+                                    <span class="scan-corner bl"></span>
+                                    <span class="scan-corner br"></span>
+                                </div>
+                                <span class="scan-overlay-hint">Placez le QR dans le cadre</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode Saisie manuelle -->
+                <div id="bien-mode-manual" class="hidden mb-4">
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded mb-4">
+                        <p class="text-sm text-amber-800 font-medium">⌨️ Saisissez le numéro d'ordre si le QR est difficile à lire</p>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                        <label for="manual-num-ordre-input" class="block text-sm font-semibold text-gray-700 mb-2">Numéro d'ordre</label>
+                        <input
+                            id="manual-num-ordre-input"
+                            type="text"
+                            inputmode="numeric"
+                            placeholder="Ex: 12345"
+                            class="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition mb-3"
+                        >
+                        <button id="manual-num-ordre-submit" class="touch-target touch-feedback w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-indigo-700 active:bg-indigo-800 transition shadow-md">
+                            Valider le numéro
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Liste des Biens Attendus -->

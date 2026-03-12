@@ -102,6 +102,7 @@ const AppState = {
     barcodeModalOpen: false,
     barcodeScannerActive: false,
     barcodeNativeLoopActive: false,
+    barcodeInputMode: 'scan', // 'scan' | 'manual'
     biensAttendusIndex: new Map(), // key: num_ordre
     biensScannesIndex: new Map(),  // key: num_ordre
     lastToastKey: null,
@@ -694,7 +695,6 @@ class ScannerManager {
 
             HapticFeedback.medium();
             UI.showEmplacementView();
-            BarcodeScannerManager.startBarcodeScanner();
 
             const invLoc = response.inventaire_localisation;
             if (invLoc?.reopened) {
@@ -731,7 +731,18 @@ class BarcodeScannerManager {
     static async startBarcodeScanner() {
         const container = document.getElementById('barcode-scanner-container');
         this.stopBarcodeScanner();
-        container.innerHTML = '<video id="bien-qr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>';
+        container.innerHTML = `
+            <video id="bien-qr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+            <div class="scan-overlay">
+                <div class="scan-reticle">
+                    <span class="scan-corner tl"></span>
+                    <span class="scan-corner tr"></span>
+                    <span class="scan-corner bl"></span>
+                    <span class="scan-corner br"></span>
+                </div>
+                <span class="scan-overlay-hint">Placez le QR dans le cadre</span>
+            </div>
+        `;
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -1019,6 +1030,63 @@ class UI {
 
         this.updateBiensList();
         this.updateProgress();
+        this.setBienInputMode('scan');
+    }
+
+    static setBienInputMode(mode) {
+        const scanBtn = document.getElementById('tab-bien-scan');
+        const manualBtn = document.getElementById('tab-bien-manual');
+        const scanPanel = document.getElementById('bien-mode-scan');
+        const manualPanel = document.getElementById('bien-mode-manual');
+        const manualInput = document.getElementById('manual-num-ordre-input');
+
+        AppState.barcodeInputMode = mode === 'manual' ? 'manual' : 'scan';
+
+        if (AppState.barcodeInputMode === 'manual') {
+            scanPanel.classList.add('hidden');
+            manualPanel.classList.remove('hidden');
+            scanBtn.classList.remove('bg-indigo-600', 'text-white');
+            scanBtn.classList.add('bg-white', 'text-gray-700');
+            manualBtn.classList.remove('bg-white', 'text-gray-700');
+            manualBtn.classList.add('bg-indigo-600', 'text-white');
+
+            BarcodeScannerManager.stopBarcodeScanner();
+            setTimeout(() => manualInput?.focus(), 50);
+            return;
+        }
+
+        manualPanel.classList.add('hidden');
+        scanPanel.classList.remove('hidden');
+        manualBtn.classList.remove('bg-indigo-600', 'text-white');
+        manualBtn.classList.add('bg-white', 'text-gray-700');
+        scanBtn.classList.remove('bg-white', 'text-gray-700');
+        scanBtn.classList.add('bg-indigo-600', 'text-white');
+
+        if (AppState.currentEmplacement) {
+            BarcodeScannerManager.startBarcodeScanner();
+        }
+    }
+
+    static submitManualNumOrdre() {
+        const input = document.getElementById('manual-num-ordre-input');
+        const raw = String(input?.value || '').trim();
+        const numOrdre = normalizeNumOrdre(raw);
+
+        if (!numOrdre) {
+            HapticFeedback.warning();
+            this.showToast('⚠️ Veuillez saisir un numéro d\'ordre valide', 'warning');
+            input?.focus();
+            return;
+        }
+
+        if (AppState.barcodeProcessing || AppState.barcodeModalOpen) {
+            this.showToast('⏳ Traitement en cours, veuillez patienter...', 'info');
+            return;
+        }
+
+        BarcodeScannerManager.handleBarcodeDetected(String(numOrdre));
+        input.value = '';
+        input.focus();
     }
 
     static updateBiensList() {
@@ -1380,8 +1448,29 @@ document.getElementById('btn-nouveau-scan').addEventListener('click', () => {
     AppState.biensScannés = [];
     AppState.barcodeModalOpen = false;
     AppState.barcodeProcessing = false;
+    AppState.barcodeInputMode = 'scan';
     rebuildBiensIndexes();
     UI.showView('scanner');
+});
+
+// Onglets scan / saisie manuelle des biens
+document.getElementById('tab-bien-scan').addEventListener('click', () => {
+    UI.setBienInputMode('scan');
+});
+
+document.getElementById('tab-bien-manual').addEventListener('click', () => {
+    UI.setBienInputMode('manual');
+});
+
+document.getElementById('manual-num-ordre-submit').addEventListener('click', () => {
+    UI.submitManualNumOrdre();
+});
+
+document.getElementById('manual-num-ordre-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        UI.submitManualNumOrdre();
+    }
 });
 
 // Modal État du bien
