@@ -176,12 +176,13 @@
                         const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
                         const mm = this.MM;
-                        // QR agrandi tout en conservant l'étiquette 70mm x 24.4mm
-                        const BC_TOP_OFFSET = 2.5 * mm;
-                        const BC_SIZE = 11.0 * mm;
-                        const CODE_Y_OFFSET = 16.5 * mm;
-                        const DESIG_Y_OFFSET = 20.0 * mm;
-                        const FS_CODE = 7;
+                        // Layout horizontal: QR à gauche, texte à droite
+                        const INNER_PAD = 1.5 * mm;
+                        const QR_TEXT_GAP = 2.0 * mm;
+                        const QR_SIZE = 16.0 * mm;
+                        const CODE_Y_OFFSET = 10.0 * mm;
+                        const DESIG_Y_OFFSET = 15.5 * mm;
+                        const FS_CODE = 6.5;
                         const FS_DESIG = 5;
 
                         const totalPages = Math.ceil(slots.length / this.TOTAL);
@@ -211,7 +212,7 @@
                                                 c.height = 360;
                                                 const ctx = c.getContext('2d');
                                                 ctx.fillStyle = '#fff';
-                                                ctx.fillRect(0, 0, 300, 300);
+                                                ctx.fillRect(0, 0, 360, 360);
                                                 ctx.drawImage(image, 0, 0, 360, 360);
                                                 try {
                                                     const embedded = await pdfDoc.embedPng(c.toDataURL('image/png'));
@@ -224,16 +225,22 @@
                                             image.src = item.qrDataUri;
                                         });
 
-                                        const qrSize = BC_SIZE;
-                                        const qrX = labelX + (this.LABEL_W - qrSize) / 2;
-                                        const qrY = labelTopY - BC_TOP_OFFSET - qrSize;
-                                        page.drawImage(img, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+                                        const qrX = labelX + INNER_PAD;
+                                        const qrY = labelTopY - ((this.LABEL_H - QR_SIZE) / 2) - QR_SIZE;
+                                        page.drawImage(img, { x: qrX, y: qrY, width: QR_SIZE, height: QR_SIZE });
                                     }
 
+                                    const textLeft = labelX + INNER_PAD + QR_SIZE + QR_TEXT_GAP;
+                                    const textMaxW = labelX + this.LABEL_W - INNER_PAD - textLeft;
+
                                     const empText = `EMP-${item.emplacementId}`;
-                                    const empTw = font.widthOfTextAtSize(empText, FS_CODE);
-                                    page.drawText(empText, {
-                                        x: labelX + (this.LABEL_W - empTw) / 2,
+                                    let empCode = empText;
+                                    while (font.widthOfTextAtSize(empCode, FS_CODE) > textMaxW && empCode.length > 1) {
+                                        empCode = empCode.slice(0, -1);
+                                    }
+                                    if (empCode.length < empText.length) empCode += '…';
+                                    page.drawText(empCode, {
+                                        x: textLeft,
                                         y: labelTopY - CODE_Y_OFFSET,
                                         size: FS_CODE,
                                         font,
@@ -241,31 +248,38 @@
                                     });
 
                                     let name = item.emplacementName;
-                                    const maxW = this.LABEL_W * 0.92;
-                                    while (fontBold.widthOfTextAtSize(name, FS_DESIG) > maxW && name.length > 1) {
+                                    while (fontBold.widthOfTextAtSize(name, FS_DESIG) > textMaxW && name.length > 1) {
                                         name = name.slice(0, -1);
                                     }
                                     if (name.length < item.emplacementName.length) name += '…';
-                                    const nameTw = fontBold.widthOfTextAtSize(name, FS_DESIG);
                                     page.drawText(name, {
-                                        x: labelX + (this.LABEL_W - nameTw) / 2,
+                                        x: textLeft,
                                         y: labelTopY - DESIG_Y_OFFSET,
                                         size: FS_DESIG,
                                         font: fontBold,
                                         color: rgb(0.2, 0.2, 0.2),
                                     });
                                 } else {
+                                    let qrDrawn = false;
                                     if (item.qr_data_uri) {
                                         const img = await this.dataUriToEmbeddedPng(pdfDoc, item.qr_data_uri, 320);
-                                        const qrY = labelTopY - BC_TOP_OFFSET - BC_SIZE;
-                                        const qrX = labelX + (this.LABEL_W - BC_SIZE) / 2;
-                                        page.drawImage(img, { x: qrX, y: qrY, width: BC_SIZE, height: BC_SIZE });
+                                        const qrX = labelX + INNER_PAD;
+                                        const qrY = labelTopY - ((this.LABEL_H - QR_SIZE) / 2) - QR_SIZE;
+                                        page.drawImage(img, { x: qrX, y: qrY, width: QR_SIZE, height: QR_SIZE });
+                                        qrDrawn = true;
                                     }
 
+                                    const textLeft = labelX + INNER_PAD + (qrDrawn ? (QR_SIZE + QR_TEXT_GAP) : 0);
+                                    const textMaxW = labelX + this.LABEL_W - INNER_PAD - textLeft;
+
                                     if (item.code_formate) {
-                                        const tw = font.widthOfTextAtSize(item.code_formate, FS_CODE);
-                                        page.drawText(item.code_formate, {
-                                            x: labelX + (this.LABEL_W - tw) / 2,
+                                        let codeTxt = item.code_formate;
+                                        while (font.widthOfTextAtSize(codeTxt, FS_CODE) > textMaxW && codeTxt.length > 1) {
+                                            codeTxt = codeTxt.slice(0, -1);
+                                        }
+                                        if (codeTxt.length < item.code_formate.length) codeTxt += '…';
+                                        page.drawText(codeTxt, {
+                                            x: textLeft,
                                             y: labelTopY - CODE_Y_OFFSET,
                                             size: FS_CODE,
                                             font,
@@ -274,15 +288,13 @@
                                     }
 
                                     if (item.designation) {
-                                        const maxTxtW = this.LABEL_W * 0.92;
                                         let txt = item.designation;
-                                        while (font.widthOfTextAtSize(txt, FS_DESIG) > maxTxtW && txt.length > 1) {
+                                        while (font.widthOfTextAtSize(txt, FS_DESIG) > textMaxW && txt.length > 1) {
                                             txt = txt.slice(0, -1);
                                         }
                                         if (txt.length < item.designation.length) txt += '…';
-                                        const tw = font.widthOfTextAtSize(txt, FS_DESIG);
                                         page.drawText(txt, {
-                                            x: labelX + (this.LABEL_W - tw) / 2,
+                                            x: textLeft,
                                             y: labelTopY - DESIG_Y_OFFSET,
                                             size: FS_DESIG,
                                             font,

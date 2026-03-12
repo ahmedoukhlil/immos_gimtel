@@ -249,12 +249,13 @@
                         const totalPages = Math.ceil(totalSlots / this.TOTAL);
 
                         const mm = this.MM;
-                        // QR agrandi tout en conservant l'étiquette 70mm x 24.4mm
-                        const BC_TOP_OFFSET  = 2.5 * mm;
-                        const BC_SIZE        = 11.0 * mm;
-                        const CODE_Y_OFFSET  = 16.5 * mm;
-                        const DESIG_Y_OFFSET = 20.0 * mm;
-                        const FS_CODE = 7;
+                        // Layout horizontal: QR à gauche, texte à droite
+                        const INNER_PAD = 1.5 * mm;
+                        const QR_TEXT_GAP = 2.0 * mm;
+                        const QR_SIZE = 16.0 * mm;
+                        const CODE_Y_OFFSET = 10.0 * mm;
+                        const DESIG_Y_OFFSET = 15.5 * mm;
+                        const FS_CODE = 6.5;
                         const FS_DESIG = 5;
 
                         let qrContent = null;
@@ -269,7 +270,7 @@
                                     c.width = 360; c.height = 360;
                                     const ctx = c.getContext('2d');
                                     ctx.fillStyle = '#fff';
-                                    ctx.fillRect(0, 0, 300, 300);
+                                    ctx.fillRect(0, 0, 360, 360);
                                     ctx.drawImage(img, 0, 0, 360, 360);
                                     try {
                                         const embedded = await pdfDoc.embedPng(c.toDataURL('image/png'));
@@ -298,30 +299,34 @@
                                     // ══════ PREMIÈRE ÉTIQUETTE : QR CODE EMPLACEMENT ══════
                                     // Même layout que les QR biens : image en haut,
                                     // texte 1 centré à 15.5mm, texte 2 centré à 19mm
-                                    const qrSize = BC_SIZE; // 9.5mm, même taille que les QR biens
-                                    const qrX = labelX + (this.LABEL_W - qrSize) / 2;
-                                    const qrY = labelTopY - BC_TOP_OFFSET - qrSize;
-                                    page.drawImage(qrImg, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+                                    const qrX = labelX + INNER_PAD;
+                                    const qrY = labelTopY - ((this.LABEL_H - QR_SIZE) / 2) - QR_SIZE;
+                                    page.drawImage(qrImg, { x: qrX, y: qrY, width: QR_SIZE, height: QR_SIZE });
 
-                                    // Nom de l'emplacement (centré, même position que code_formate)
+                                    const textLeft = qrX + QR_SIZE + QR_TEXT_GAP;
+                                    const textMaxW = labelX + this.LABEL_W - INNER_PAD - textLeft;
+
+                                    // Nom de l'emplacement (ligne 1, à droite du QR)
                                     let empText = this.emplacementName;
-                                    const maxEmpW = this.LABEL_W * 0.92;
-                                    while (fontBold.widthOfTextAtSize(empText, FS_CODE) > maxEmpW && empText.length > 1) {
+                                    while (fontBold.widthOfTextAtSize(empText, FS_CODE) > textMaxW && empText.length > 1) {
                                         empText = empText.slice(0, -1);
                                     }
                                     if (empText.length < this.emplacementName.length) empText += '…';
-                                    const empTw = fontBold.widthOfTextAtSize(empText, FS_CODE);
                                     page.drawText(empText, {
-                                        x: labelX + (this.LABEL_W - empTw) / 2,
+                                        x: textLeft,
                                         y: labelTopY - CODE_Y_OFFSET,
                                         size: FS_CODE, font: fontBold,
                                         color: PDFLib.rgb(0, 0, 0)
                                     });
 
-                                    // Code EMP-id (centré, même position que désignation)
-                                    const empCodeTw = font.widthOfTextAtSize(qrContent, FS_DESIG);
-                                    page.drawText(qrContent, {
-                                        x: labelX + (this.LABEL_W - empCodeTw) / 2,
+                                    // Code EMP-id (ligne 2)
+                                    let empCodeText = qrContent;
+                                    while (font.widthOfTextAtSize(empCodeText, FS_DESIG) > textMaxW && empCodeText.length > 1) {
+                                        empCodeText = empCodeText.slice(0, -1);
+                                    }
+                                    if (empCodeText.length < qrContent.length) empCodeText += '…';
+                                    page.drawText(empCodeText, {
+                                        x: textLeft,
                                         y: labelTopY - DESIG_Y_OFFSET,
                                         size: FS_DESIG, font,
                                         color: PDFLib.rgb(0.3, 0.3, 0.3)
@@ -340,17 +345,26 @@
                                 const desig = String(b.designation || '').trim();
                                 if (!val) continue;
 
+                                let qrDrawn = false;
                                 if (b.qr_data_uri) {
                                     const img = await this.dataUriToEmbeddedPng(pdfDoc, String(b.qr_data_uri), 320);
-                                    const qrY = labelTopY - BC_TOP_OFFSET - BC_SIZE;
-                                    const qrX = labelX + (this.LABEL_W - BC_SIZE) / 2;
-                                    page.drawImage(img, { x: qrX, y: qrY, width: BC_SIZE, height: BC_SIZE });
+                                    const qrX = labelX + INNER_PAD;
+                                    const qrY = labelTopY - ((this.LABEL_H - QR_SIZE) / 2) - QR_SIZE;
+                                    page.drawImage(img, { x: qrX, y: qrY, width: QR_SIZE, height: QR_SIZE });
+                                    qrDrawn = true;
                                 }
 
+                                const textLeft = labelX + INNER_PAD + (qrDrawn ? (QR_SIZE + QR_TEXT_GAP) : 0);
+                                const textMaxW = labelX + this.LABEL_W - INNER_PAD - textLeft;
+
                                 if (code) {
-                                    const tw = font.widthOfTextAtSize(code, FS_CODE);
-                                    page.drawText(code, {
-                                        x: labelX + (this.LABEL_W - tw) / 2,
+                                    let codeTxt = code;
+                                    while (font.widthOfTextAtSize(codeTxt, FS_CODE) > textMaxW && codeTxt.length > 1) {
+                                        codeTxt = codeTxt.slice(0, -1);
+                                    }
+                                    if (codeTxt.length < code.length) codeTxt += '…';
+                                    page.drawText(codeTxt, {
+                                        x: textLeft,
                                         y: labelTopY - CODE_Y_OFFSET,
                                         size: FS_CODE, font,
                                         color: PDFLib.rgb(0, 0, 0)
@@ -358,15 +372,13 @@
                                 }
 
                                 if (desig) {
-                                    const maxTxtW = this.LABEL_W * 0.92;
                                     let txt = desig;
-                                    while (font.widthOfTextAtSize(txt, FS_DESIG) > maxTxtW && txt.length > 0) {
+                                    while (font.widthOfTextAtSize(txt, FS_DESIG) > textMaxW && txt.length > 0) {
                                         txt = txt.slice(0, -1);
                                     }
                                     if (txt.length < desig.length) txt += '…';
-                                    const tw = font.widthOfTextAtSize(txt, FS_DESIG);
                                     page.drawText(txt, {
-                                        x: labelX + (this.LABEL_W - tw) / 2,
+                                        x: textLeft,
                                         y: labelTopY - DESIG_Y_OFFSET,
                                         size: FS_DESIG, font,
                                         color: PDFLib.rgb(0, 0, 0)
