@@ -109,6 +109,7 @@ const AppState = {
     lastToastAt: 0,
     barcodeLastInvalidAt: 0,
     lastActivityAt: 0,
+    emplacementInputMode: 'scan', // 'scan' | 'manual'
 };
 
 // ===========================================
@@ -482,6 +483,10 @@ class SessionSecurityManager {
 
 class ScannerManager {
     static async startQRScanner() {
+        if (AppState.emplacementInputMode === 'manual') {
+            return;
+        }
+
         // Vérifier que ZXing est disponible
         if (typeof window.ZXing === 'undefined') {
             console.error('[Scanner] ZXing n\'est pas chargé');
@@ -494,6 +499,15 @@ class ScannerManager {
         this.stopScanner();
         container.innerHTML = `
             <video id="qr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+            <div class="scan-overlay">
+                <div class="scan-reticle">
+                    <span class="scan-corner tl"></span>
+                    <span class="scan-corner tr"></span>
+                    <span class="scan-corner bl"></span>
+                    <span class="scan-corner br"></span>
+                </div>
+                <span class="scan-overlay-hint">Placez le QR dans le cadre</span>
+            </div>
         `;
 
         try {
@@ -1006,6 +1020,22 @@ class UI {
         } else {
             header.classList.remove('hidden');
         }
+
+        const startScannerBtn = document.getElementById('start-scanner-btn');
+
+        // Gestion lifecycle caméra scanner emplacement
+        if (viewName === 'scanner') {
+            if (startScannerBtn) startScannerBtn.style.display = 'none';
+            this.setEmplacementInputMode(AppState.emplacementInputMode);
+        } else {
+            ScannerManager.stopScanner();
+            if (startScannerBtn) startScannerBtn.style.display = '';
+        }
+
+        // Fermer le scanner biens dès qu'on quitte la vue emplacement
+        if (viewName !== 'emplacement-biens') {
+            BarcodeScannerManager.stopBarcodeScanner();
+        }
     }
 
     static updateUserInfo() {
@@ -1031,6 +1061,56 @@ class UI {
         this.updateBiensList();
         this.updateProgress();
         this.setBienInputMode('scan');
+    }
+
+    static setEmplacementInputMode(mode) {
+        const scanBtn = document.getElementById('tab-emp-scan');
+        const manualBtn = document.getElementById('tab-emp-manual');
+        const scanPanel = document.getElementById('emp-mode-scan');
+        const manualPanel = document.getElementById('emp-mode-manual');
+        const manualInput = document.getElementById('manual-emp-input');
+
+        AppState.emplacementInputMode = mode === 'manual' ? 'manual' : 'scan';
+
+        if (AppState.emplacementInputMode === 'manual') {
+            scanPanel.classList.add('hidden');
+            manualPanel.classList.remove('hidden');
+            scanBtn.classList.remove('bg-indigo-600', 'text-white');
+            scanBtn.classList.add('bg-white', 'text-gray-700');
+            manualBtn.classList.remove('bg-white', 'text-gray-700');
+            manualBtn.classList.add('bg-indigo-600', 'text-white');
+            ScannerManager.stopScanner();
+            setTimeout(() => manualInput?.focus(), 50);
+            return;
+        }
+
+        manualPanel.classList.add('hidden');
+        scanPanel.classList.remove('hidden');
+        manualBtn.classList.remove('bg-indigo-600', 'text-white');
+        manualBtn.classList.add('bg-white', 'text-gray-700');
+        scanBtn.classList.remove('bg-white', 'text-gray-700');
+        scanBtn.classList.add('bg-indigo-600', 'text-white');
+
+        const scannerViewVisible = !document.getElementById('view-scanner')?.classList.contains('hidden');
+        if (scannerViewVisible) {
+            ScannerManager.startQRScanner();
+        }
+    }
+
+    static submitManualEmplacementCode() {
+        const input = document.getElementById('manual-emp-input');
+        const raw = String(input?.value || '').trim();
+        if (!raw) {
+            HapticFeedback.warning();
+            this.showToast('⚠️ Veuillez saisir un code/ID emplacement', 'warning');
+            input?.focus();
+            return;
+        }
+        ScannerManager.handleQRCodeDetected(raw);
+        if (input) {
+            input.value = '';
+            input.focus();
+        }
     }
 
     static setBienInputMode(mode) {
@@ -1434,6 +1514,51 @@ document.getElementById('start-scanner-btn').addEventListener('click', () => {
     document.getElementById('start-scanner-btn').style.display = 'none';
 });
 
+// Onglets scan / saisie manuelle emplacement
+document.getElementById('tab-emp-scan').addEventListener('click', () => {
+    UI.setEmplacementInputMode('scan');
+});
+
+document.getElementById('tab-emp-manual').addEventListener('click', () => {
+    UI.setEmplacementInputMode('manual');
+});
+
+document.getElementById('manual-emp-submit').addEventListener('click', () => {
+    UI.submitManualEmplacementCode();
+});
+
+document.getElementById('manual-emp-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        UI.submitManualEmplacementCode();
+    }
+});
+
+// Fermer les caméras quand la page est masquée/fermée
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') {
+        ScannerManager.stopScanner();
+        BarcodeScannerManager.stopBarcodeScanner();
+        return;
+    }
+
+    if (!AppState.token) return;
+
+    const scannerViewVisible = !document.getElementById('view-scanner')?.classList.contains('hidden');
+    const emplacementViewVisible = !document.getElementById('view-emplacement-biens')?.classList.contains('hidden');
+
+    if (scannerViewVisible && AppState.emplacementInputMode !== 'manual') {
+        ScannerManager.startQRScanner();
+    } else if (emplacementViewVisible && AppState.barcodeInputMode !== 'manual') {
+        BarcodeScannerManager.startBarcodeScanner();
+    }
+});
+
+window.addEventListener('pagehide', () => {
+    ScannerManager.stopScanner();
+    BarcodeScannerManager.stopBarcodeScanner();
+});
+
 // Terminer scan emplacement
 document.getElementById('btn-terminer-emplacement').addEventListener('click', () => {
     if (confirm('Terminer le scan de cet emplacement ?')) {
@@ -1449,6 +1574,7 @@ document.getElementById('btn-nouveau-scan').addEventListener('click', () => {
     AppState.barcodeModalOpen = false;
     AppState.barcodeProcessing = false;
     AppState.barcodeInputMode = 'scan';
+    AppState.emplacementInputMode = 'scan';
     rebuildBiensIndexes();
     UI.showView('scanner');
 });
