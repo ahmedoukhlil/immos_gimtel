@@ -169,85 +169,28 @@ function rebuildBiensIndexes() {
 }
 
 // ===========================================
-// ZXING QR DECODER
+// JSQR QR DECODER
 // ===========================================
 
 class QRDecoder {
-    static getZXingNamespace() {
-        const candidates = [window.ZXing, window.ZXingJs, window.ZXingBrowser];
-        return candidates.find(ns =>
-            ns &&
-            ns.MultiFormatReader &&
-            ns.DecodeHintType &&
-            ns.BarcodeFormat &&
-            ns.RGBLuminanceSource &&
-            ns.BinaryBitmap &&
-            ns.HybridBinarizer
-        ) || null;
-    }
-
-    static hasZXing() {
-        return !!this.getZXingNamespace();
-    }
-
-    static getReader() {
-        const ZXing = this.getZXingNamespace();
-        if (!ZXing) {
-            throw new Error('ZXing non chargé');
-        }
-        // Nouveau reader à chaque appel pour éviter tout état corrompu persistant
-        const hints = new Map();
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-        const reader = new ZXing.MultiFormatReader();
-        reader.setHints(hints);
-        return reader;
-    }
-
-    static rgbaToRgb(imageData) {
-        const src = imageData.data;
-        const rgb = new Uint8ClampedArray((src.length / 4) * 3);
-        for (let i = 0, j = 0; i < src.length; i += 4, j += 3) {
-            rgb[j] = src[i];
-            rgb[j + 1] = src[i + 1];
-            rgb[j + 2] = src[i + 2];
-        }
-        return rgb;
+    static hasJsQR() {
+        return typeof window.jsQR === 'function';
     }
 
     static decodeImageData(imageData) {
-        const reader = this.getReader();
-        const ZXing = this.getZXingNamespace();
-        if (!ZXing) {
-            throw new Error('ZXing non chargé');
+        if (!this.hasJsQR()) {
+            throw new Error('jsQR non chargé');
         }
-        // RGBLuminanceSource attend ici un Int32Array (pixels ARGB) ou une matrice de luminance.
-        // getImageData() renvoie du RGBA; on l'expose en Int32Array pour que ZXing calcule la luminance correctement.
-        const rgbaAsInt32 = new Int32Array(
-            imageData.data.buffer,
-            imageData.data.byteOffset,
-            imageData.data.byteLength / 4
-        );
-        const luminanceSource = new ZXing.RGBLuminanceSource(
-            rgbaAsInt32,
-            imageData.width,
-            imageData.height
-        );
-        const binaryBitmap = new ZXing.BinaryBitmap(
-            new ZXing.HybridBinarizer(luminanceSource)
-        );
-        const result = reader.decode(binaryBitmap);
-        return result && result.getText ? result.getText() : null;
+        const result = window.jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth',
+        });
+        return result && result.data ? String(result.data) : null;
     }
 
-    static isNotFoundError(error) {
-        const name = String(error?.name || '');
-        const message = String(error?.message || '');
-        return (
-            name.includes('NotFound') ||
-            message.includes('NotFoundException') ||
-            message.includes('No MultiFormat Readers were able to detect the code')
-        );
+    static isHarmlessError(error) {
+        if (!error) return true;
+        const msg = String(error.message || '');
+        return msg.includes('jsQR') && msg.includes('non chargé');
     }
 }
 
@@ -410,30 +353,8 @@ class AuthManager {
             });
         } catch (_) {}
 
-        // Supprime les caches de la PWA
-        try {
-            if ('caches' in window) {
-                const cacheNames = await caches.keys();
-                await Promise.all(cacheNames.map(name => caches.delete(name)));
-            }
-        } catch (_) {}
-
-        // Best effort: purge IndexedDB (si API disponible sur le navigateur)
-        try {
-            if (window.indexedDB && typeof window.indexedDB.databases === 'function') {
-                const dbs = await window.indexedDB.databases();
-                await Promise.all(
-                    (dbs || [])
-                        .filter(db => db && db.name)
-                        .map(db => new Promise(resolve => {
-                            const req = window.indexedDB.deleteDatabase(db.name);
-                            req.onsuccess = () => resolve();
-                            req.onerror = () => resolve();
-                            req.onblocked = () => resolve();
-                        }))
-                );
-            }
-        } catch (_) {}
+        // Note: on ne supprime PAS les caches PWA (service worker) ni IndexedDB
+        // pour permettre à l'app de continuer à fonctionner hors-ligne après déconnexion.
     }
 }
 
@@ -529,9 +450,9 @@ class ScannerManager {
             return;
         }
 
-        // Vérifier que ZXing est disponible
-        if (!QRDecoder.hasZXing()) {
-            console.error('[Scanner] ZXing n\'est pas chargé');
+        // Vérifier que jsQR est disponible
+        if (!QRDecoder.hasJsQR()) {
+            console.error('[Scanner] jsQR n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée. Rechargez la page.', 'error');
             return;
@@ -576,6 +497,7 @@ class ScannerManager {
             await new Promise(resolve => {
                 video.addEventListener('loadedmetadata', resolve, { once: true });
             });
+            await video.play();
 
             console.log('[Scanner] Caméra prête:', video.videoWidth, 'x', video.videoHeight);
             AppState.scannerActive = true;
@@ -600,9 +522,8 @@ class ScannerManager {
     }
 
     static detectQRCode(video) {
-        // Vérifier que ZXing est disponible
-        if (!QRDecoder.hasZXing()) {
-            console.error('[Scanner] ZXing n\'est pas chargé');
+        if (!QRDecoder.hasJsQR()) {
+            console.error('[Scanner] jsQR n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée', 'error');
             return;
@@ -610,6 +531,9 @@ class ScannerManager {
 
         this._ensureCanvas();
         clearTimeout(this._loopTimer);
+
+        const dw = CONFIG.SCANNER.qr.decodeWidth;
+        const dh = CONFIG.SCANNER.qr.decodeHeight;
 
         const tick = () => {
             if (!AppState.scannerActive) return;
@@ -619,48 +543,28 @@ class ScannerManager {
                 return;
             }
 
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                this._ctx.drawImage(
-                    video,
-                    0,
-                    0,
-                    CONFIG.SCANNER.qr.decodeWidth,
-                    CONFIG.SCANNER.qr.decodeHeight
-                );
+            if (video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+                const vw = video.videoWidth;
+                const vh = video.videoHeight;
+                let decodedText = null;
 
-                try {
-                    const imageData = this._ctx.getImageData(
-                        0,
-                        0,
-                        CONFIG.SCANNER.qr.decodeWidth,
-                        CONFIG.SCANNER.qr.decodeHeight
-                    );
-                    let decodedText = QRDecoder.decodeImageData(imageData);
-                    if (!decodedText) {
-                        // 2e passe: crop central pour mieux lire les petits QR centrés
-                        const cropRatio = 0.65;
-                        const sw = (video.videoWidth || 0) * cropRatio;
-                        const sh = (video.videoHeight || 0) * cropRatio;
-                        const sx = ((video.videoWidth || 0) - sw) / 2;
-                        const sy = ((video.videoHeight || 0) - sh) / 2;
-                        this._ctx.drawImage(video, sx, sy, sw, sh, 0, 0, CONFIG.SCANNER.qr.decodeWidth, CONFIG.SCANNER.qr.decodeHeight);
-                        const centerData = this._ctx.getImageData(
-                            0,
-                            0,
-                            CONFIG.SCANNER.qr.decodeWidth,
-                            CONFIG.SCANNER.qr.decodeHeight
-                        );
-                        decodedText = QRDecoder.decodeImageData(centerData);
-                    }
-                    if (decodedText) {
-                        console.log('[Scanner] QR Code détecté:', decodedText);
-                        this.handleQRCodeDetected(decodedText);
-                        return;
-                    }
-                } catch (error) {
-                    if (!QRDecoder.isNotFoundError(error)) {
-                        console.error('[Scanner] Erreur lors du scan:', error);
-                    }
+                // Passe 1 : frame complète downscalée
+                this._ctx.drawImage(video, 0, 0, dw, dh);
+                const fullData = this._ctx.getImageData(0, 0, dw, dh);
+                decodedText = QRDecoder.decodeImageData(fullData);
+
+                // Passe 2 : crop central 60% (zoom sur le centre, meilleur pour petits QR)
+                if (!decodedText) {
+                    const r2 = 0.6;
+                    const sw2 = vw * r2, sh2 = vh * r2;
+                    this._ctx.drawImage(video, (vw - sw2) / 2, (vh - sh2) / 2, sw2, sh2, 0, 0, dw, dh);
+                    decodedText = QRDecoder.decodeImageData(this._ctx.getImageData(0, 0, dw, dh));
+                }
+
+                if (decodedText) {
+                    console.log('[Scanner] QR Code détecté:', decodedText);
+                    this.handleQRCodeDetected(decodedText);
+                    return;
                 }
             }
 
@@ -846,7 +750,7 @@ class ScannerManager {
 }
 
 // ===========================================
-// QR SCANNER BIENS - QR code (ZXing + BarcodeDetector)
+// QR SCANNER BIENS - QR code (jsQR + BarcodeDetector)
 // ===========================================
 
 class BarcodeScannerManager {
@@ -889,6 +793,7 @@ class BarcodeScannerManager {
             await new Promise(resolve => {
                 video.addEventListener('loadedmetadata', resolve, { once: true });
             });
+            await video.play();
 
             console.log('[QR Biens] Caméra prête:', video.videoWidth, 'x', video.videoHeight);
             AppState.barcodeScannerActive = true;
@@ -903,8 +808,8 @@ class BarcodeScannerManager {
     }
 
     static startQrDetectionLoop(video) {
-        if (!QRDecoder.hasZXing()) {
-            console.error('[QR Biens] ZXing n\'est pas chargé');
+        if (!QRDecoder.hasJsQR()) {
+            console.error('[QR Biens] jsQR n\'est pas chargé');
             HapticFeedback.error();
             UI.showToast('❌ Erreur: Bibliothèque QR code non chargée', 'error');
             return;
@@ -914,6 +819,9 @@ class BarcodeScannerManager {
         this._ensureCanvas();
         clearTimeout(this._loopTimer);
 
+        const dw = this._canvas.width;
+        const dh = this._canvas.height;
+
         const tick = () => {
             if (!AppState.barcodeNativeLoopActive || !AppState.barcodeScannerActive) return;
 
@@ -922,45 +830,42 @@ class BarcodeScannerManager {
                 return;
             }
 
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                this._drawDecodeFrame(video);
+            if (video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+                // Passe 1 : frame complète (QR peut être n'importe où)
+                this._drawDecodeFrame(video, null);
 
                 if (this._nativeDetector && !this._nativeDetectPending) {
                     this._nativeDetectPending = true;
-                    // Utiliser la même zone décodée que ZXing (canvas croppé)
                     this._nativeDetector.detect(this._canvas)
                         .then(results => {
                             if (!results || results.length === 0) return;
                             const raw = String(results[0].rawValue || '').trim();
                             this.consumeDetectedValue(raw);
                         })
-                        .catch(() => {
-                            // Ignorer les erreurs sporadiques du decodeur natif
-                        })
-                        .finally(() => {
-                            this._nativeDetectPending = false;
-                        });
+                        .catch(() => {})
+                        .finally(() => { this._nativeDetectPending = false; });
                 }
 
+                let decodedText = null;
                 try {
-                    const imageData = this._ctx.getImageData(
-                        0,
-                        0,
-                        this._canvas.width,
-                        this._canvas.height
-                    );
-                    const decodedText = QRDecoder.decodeImageData(imageData);
-                    if (decodedText) {
-                        const rawValue = String(decodedText).trim();
-                        if (this.consumeDetectedValue(rawValue)) {
-                            this._loopTimer = setTimeout(tick, CONFIG.SCANNER.qr.decodeIntervalMs);
-                            return;
-                        }
+                    decodedText = QRDecoder.decodeImageData(this._ctx.getImageData(0, 0, dw, dh));
+                } catch (e) {
+                    console.error('[QR Biens] jsQR erreur passe 1:', e);
+                }
+
+                // Passe 2 : crop central 60% (zoom sur petit QR centré)
+                if (!decodedText) {
+                    try {
+                        this._drawDecodeFrame(video, 0.6);
+                        decodedText = QRDecoder.decodeImageData(this._ctx.getImageData(0, 0, dw, dh));
+                    } catch (e) {
+                        console.error('[QR Biens] jsQR erreur passe 2:', e);
                     }
-                } catch (error) {
-                    if (!QRDecoder.isNotFoundError(error)) {
-                        console.error('[QR Biens] Erreur lors du scan:', error);
-                    }
+                }
+
+                if (decodedText) {
+                    const rawValue = String(decodedText).trim();
+                    this.consumeDetectedValue(rawValue);
                 }
             }
 
@@ -988,23 +893,26 @@ class BarcodeScannerManager {
     static _ensureCanvas() {
         if (!this._canvas || !this._ctx) {
             this._canvas = document.createElement('canvas');
-            this._canvas.width = 480;
-            this._canvas.height = 360;
+            this._canvas.width = CONFIG.SCANNER.qr.decodeWidth;
+            this._canvas.height = CONFIG.SCANNER.qr.decodeHeight;
             this._ctx = this._canvas.getContext('2d', { willReadFrequently: true });
         }
     }
 
-    static _drawDecodeFrame(video) {
+    static _drawDecodeFrame(video, cropRatio) {
         const srcW = video.videoWidth || 0;
         const srcH = video.videoHeight || 0;
         if (srcW <= 0 || srcH <= 0) return;
 
-        const cropRatio = 0.6; // Crop central pour augmenter la taille apparente du QR dans l'image décodée
+        if (!cropRatio || cropRatio >= 1) {
+            this._ctx.drawImage(video, 0, 0, this._canvas.width, this._canvas.height);
+            return;
+        }
+
         const sw = srcW * cropRatio;
         const sh = srcH * cropRatio;
         const sx = (srcW - sw) / 2;
         const sy = (srcH - sh) / 2;
-
         this._ctx.drawImage(video, sx, sy, sw, sh, 0, 0, this._canvas.width, this._canvas.height);
     }
 
